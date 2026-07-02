@@ -1,0 +1,122 @@
+@model SweetCakeShop.Models.ViewModels.CheckoutViewModel
+@using SweetCakeShop.Models.ViewModels
+
+@{
+    ViewData["Title"] = "Checkout";
+    var cart = ViewData["Cart"] as CartViewModel ?? new CartViewModel();
+}
+
+<div class="container my-5">
+    <h2 class="mb-4">Xác nhận đơn hàng</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Thông tin giao hàng</h5>
+            <form asp-action="CheckoutConfirm" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Họ và tên</label>
+                    <input asp-for="CustomerName" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="CustomerEmail" class="form-control" type="email" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Số điện thoại</label>
+                    <input asp-for="CustomerPhone" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Địa chỉ giao hàng</label>
+                    <textarea asp-for="ShippingAddress" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Quay lại giỏ hàng</a>
+                    <button type="submit" class="btn btn-success">Đặt hàng</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-6">
+            <h5>Đơn hàng</h5>
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Giá</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in cart.Items)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td>@item.Price.ToString("N0") ₫</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.Subtotal.ToString("N0") ₫</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end fw-bold">Tạm tính:</td>
+                        <td class="fw-bold">@cart.TotalAmount.ToString("N0") ₫</td>
+                    </tr>
+                    @if (!string.IsNullOrEmpty(cart.CouponCode))
+                    {
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold text-success">
+                                Mã giảm giá (@cart.CouponCode):
+                            </td>
+                            <td class="fw-bold text-success">-@cart.DiscountAmount.ToString("N0") ₫</td>
+                        </tr>
+                    }
+                    <tr>
+                        <td colspan="3" class="text-end fw-bold fs-5">Tổng cộng:</td>
+                        <td class="fw-bold fs-5 text-pink">@((cart.TotalAmount - cart.DiscountAmount).ToString("N0")) ₫</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+    <div id="toast-container"></div>
+</div>
+
+<script>
+    function showToast(message, type = 'info', delay = 3000) {
+        // type: 'info', 'success', 'danger', 'warning'
+        const toastId = 't' + Date.now();
+        const colorClass = {
+            info: 'bg-info text-white',
+            success: 'bg-success text-white',
+            danger: 'bg-danger text-white',
+            warning: 'bg-warning text-dark'
+        }[type] || 'bg-info text-white';
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+            <div id="${toastId}" class="toast ${colorClass} align-items-center border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="${delay}">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>`;
+        document.getElementById('toast-container')?.appendChild(wrapper);
+
+        var toastEl = document.getElementById(toastId)
+        var toast = new bootstrap.Toast(toastEl)
+        toast.show()
+
+        // remove after hidden
+        toastEl.addEventListener('hidden.bs.toast', function () {
+            toastEl.remove();
+        });
+    }
+</script>
