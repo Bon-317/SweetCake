@@ -11,6 +11,7 @@ namespace SweetCakeShop.Models.Api
     public class ChatHistoryResponse
     {
         public bool Success { get; set; } = true;
+        public string SessionKey { get; set; } = string.Empty;
         public List<ChatMessageDto> Messages { get; set; } = [];
         public List<string> QuickReplies { get; set; } = [];
     }
@@ -25,6 +26,7 @@ namespace SweetCakeShop.Models.Api
     public class SendChatMessageResponse
     {
         public bool Success { get; set; }
+        public string SessionKey { get; set; } = string.Empty;
         public string Reply { get; set; } = string.Empty;
         public List<ChatProductCardDto> Products { get; set; } = [];
         public List<string> QuickReplies { get; set; } = [];

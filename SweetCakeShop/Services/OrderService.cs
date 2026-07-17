@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SweetCakeShop.Data;
 using SweetCakeShop.Models;
 using SweetCakeShop.Models.ViewModels;
@@ -19,16 +19,25 @@ namespace SweetCakeShop.Services
             if (cart == null || !cart.Items.Any())
                 throw new ArgumentException("Cart is empty", nameof(cart));
 
+            var fullAddress = !string.IsNullOrEmpty(checkout.StreetAddress)
+                ? $"{checkout.StreetAddress}, {checkout.Ward}, {checkout.District}, {checkout.Province}"
+                : checkout.ShippingAddress ?? string.Empty;
+
             var order = new Order
             {
                 UserId = userId ?? string.Empty,
                 CustomerName = checkout.CustomerName ?? string.Empty,
                 CustomerEmail = checkout.CustomerEmail ?? string.Empty,
                 CustomerPhone = checkout.CustomerPhone ?? string.Empty,
-                ShippingAddress = checkout.ShippingAddress ?? string.Empty,
+                ShippingAddress = fullAddress,
+                Province = checkout.Province ?? string.Empty,
+                District = checkout.District ?? string.Empty,
+                Ward = checkout.Ward ?? string.Empty,
+                StreetAddress = checkout.StreetAddress ?? string.Empty,
+                ShippingFee = checkout.ShippingFee,
                 IsGuest = string.IsNullOrEmpty(userId),
                 OrderDate = DateTime.UtcNow,
-                TotalPrice = cart.TotalAmount,
+                TotalPrice = cart.TotalAmount + checkout.ShippingFee,
                 Status = "Pending"
             };
 

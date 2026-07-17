@@ -29,6 +29,8 @@
                        asp-controller="Admin" asp-action="Coupons">Mã giảm giá</a>
                     <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "TopSellingProducts" ? "active" : "")"
                        asp-controller="Admin" asp-action="TopSellingProducts">Bán chạy</a>
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "LiveChat" ? "active" : "")"
+                       asp-controller="Admin" asp-action="LiveChat">💬 Hỗ trợ Khách hàng (Live)</a>
                     <hr class="border-secondary opacity-25" />
                     <a class="nav-link" asp-controller="Home" asp-action="Index">Về trang chủ</a>
                 </nav>
@@ -39,6 +41,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     @await Html.PartialAsync("_AdminChatWidget")
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

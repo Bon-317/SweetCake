@@ -11,5 +11,8 @@ namespace SweetCakeShop.Services.Chat
         Task<CustomerChatMessage> AddModelMessageAsync(string content, CancellationToken ct = default);
         Task<bool> HasAnyMessagesAsync(CancellationToken ct = default);
         Task MergeChatTokenToUserAsync(string chatToken, string userId, CancellationToken ct = default);
+        Task<List<object>> ListActiveSessionsForAdminAsync(CancellationToken ct = default);
+        Task<List<ChatMessageDto>> GetHistoryBySessionKeyAsync(string sessionKey, CancellationToken ct = default);
+        Task<CustomerChatMessage> AddAdminMessageAsync(string sessionKey, string content, CancellationToken ct = default);
     }
 }

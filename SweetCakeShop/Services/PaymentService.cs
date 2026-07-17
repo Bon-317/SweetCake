@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -40,8 +40,22 @@ namespace SweetCakeShop.Services
         {
             try
             {
+                // Ensure StripeConfiguration.ApiKey is set before calling Stripe
+                if (string.IsNullOrWhiteSpace(StripeConfiguration.ApiKey))
+                {
+                    var secretKey = _configuration["Stripe:SecretKey"] ?? Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+                    if (!string.IsNullOrWhiteSpace(secretKey))
+                    {
+                        StripeConfiguration.ApiKey = secretKey;
+                    }
+                }
+
                 // Amount in smallest currency unit (VND used as whole integer here)
                 var amount = (long)order.TotalPrice;
+                if (amount < 12000)
+                {
+                    amount = 12000; // Stripe requirement: VND unit amount must be at least 12,000 (~$0.50 USD)
+                }
 
                 var options = new SessionCreateOptions
                 {

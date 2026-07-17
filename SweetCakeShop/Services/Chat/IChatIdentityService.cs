@@ -4,6 +4,7 @@ namespace SweetCakeShop.Services.Chat
     {
         string EnsureChatTokenCookie();
         (string? UserId, string? ChatToken) GetIdentity();
+        string GetSessionKey();
         void ClearChatTokenCookie();
     }
 }

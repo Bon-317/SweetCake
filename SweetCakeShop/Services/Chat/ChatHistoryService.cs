@@ -94,5 +94,79 @@ namespace SweetCakeShop.Services.Chat
             }
             await _db.SaveChangesAsync(ct);
         }
+
+        public async Task<List<object>> ListActiveSessionsForAdminAsync(CancellationToken ct = default)
+        {
+            var all = await _db.CustomerChatMessages
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(500)
+                .ToListAsync(ct);
+
+            var groups = all
+                .Where(m => !string.IsNullOrEmpty(m.UserId) || !string.IsNullOrEmpty(m.ChatToken))
+                .GroupBy(m => !string.IsNullOrEmpty(m.UserId) ? "usr_" + m.UserId : "tok_" + m.ChatToken)
+                .Select(g =>
+                {
+                    var last = g.First();
+                    return (object)new
+                    {
+                        sessionKey = g.Key,
+                        lastMessage = last.Content,
+                        lastSender = last.Sender,
+                        lastUpdated = last.CreatedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy"),
+                        count = g.Count()
+                    };
+                })
+                .ToList();
+
+            return groups;
+        }
+
+        public async Task<List<ChatMessageDto>> GetHistoryBySessionKeyAsync(string sessionKey, CancellationToken ct = default)
+        {
+            IQueryable<CustomerChatMessage> query;
+            if (sessionKey.StartsWith("usr_"))
+            {
+                var uid = sessionKey.Substring(4);
+                query = _db.CustomerChatMessages.Where(m => m.UserId == uid);
+            }
+            else if (sessionKey.StartsWith("tok_"))
+            {
+                var tok = sessionKey.Substring(4);
+                query = _db.CustomerChatMessages.Where(m => m.ChatToken == tok);
+            }
+            else
+            {
+                return new List<ChatMessageDto>();
+            }
+
+            var rows = await query.OrderBy(m => m.CreatedAt).Take(100).ToListAsync(ct);
+            return rows.Select(m => new ChatMessageDto
+            {
+                Sender = m.Sender,
+                Content = m.Content,
+                CreatedAt = m.CreatedAt
+            }).ToList();
+        }
+
+        public async Task<CustomerChatMessage> AddAdminMessageAsync(string sessionKey, string content, CancellationToken ct = default)
+        {
+            string? userId = null;
+            string? chatToken = null;
+            if (sessionKey.StartsWith("usr_")) userId = sessionKey.Substring(4);
+            else if (sessionKey.StartsWith("tok_")) chatToken = sessionKey.Substring(4);
+
+            var msg = new CustomerChatMessage
+            {
+                UserId = userId,
+                ChatToken = chatToken,
+                Sender = "Admin",
+                Content = content.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+            _db.CustomerChatMessages.Add(msg);
+            await _db.SaveChangesAsync(ct);
+            return msg;
+        }
     }
 }

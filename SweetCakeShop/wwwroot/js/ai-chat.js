@@ -25,6 +25,7 @@ window.SweetCakeAiChat = function (config) {
 
     fab.addEventListener('click', async () => {
         panel.classList.toggle('open');
+        fab.classList.remove('ai-fab-unread');
         if (panel.classList.contains('open') && !historyLoaded && config.historyUrl) {
             await loadHistory();
         }
@@ -69,18 +70,32 @@ window.SweetCakeAiChat = function (config) {
     }
 
     function appendMsg(sender, text, products, scroll = true) {
-        const role = sender === 'user' ? 'user' : 'bot';
+        const sLower = (sender || '').toLowerCase();
+        const isUser = sLower === 'user';
+        const isAdmin = sLower === 'admin';
+        const role = isUser ? 'user' : (isAdmin ? 'admin' : 'bot');
+
         const wrap = document.createElement('div');
         wrap.className = 'ai-msg ' + role;
-        const label = role === 'user' ? 'Bạn' : 'Trợ lý';
+
+        let labelHtml = '';
+        if (isUser) {
+            labelHtml = '<div class="small text-muted mb-1 text-end">Bạn</div>';
+        } else if (isAdmin) {
+            labelHtml = '<div class="mb-1"><span class="badge bg-danger text-white rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-person-check-fill me-1"></i>👑 Admin hỗ trợ trực tiếp (Giải quyết vấn đề)</span></div>';
+        } else {
+            labelHtml = '<div class="mb-1"><span class="badge bg-light text-secondary border px-2 py-1 rounded-pill" style="font-size: 0.72rem;"><i class="bi bi-robot me-1"></i>🤖 AI Trợ lý tự động</span></div>';
+        }
+
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        if (role === 'bot') {
+        if (!isUser) {
             bubble.innerHTML = renderMarkdown(text) + renderProductCards(products);
         } else {
             bubble.textContent = text;
         }
-        wrap.innerHTML = '<div class="small text-muted mb-1">' + label + '</div>';
+
+        wrap.innerHTML = labelHtml;
         wrap.appendChild(bubble);
         messages.appendChild(wrap);
         if (scroll) messages.scrollTop = messages.scrollHeight;
@@ -132,6 +147,8 @@ window.SweetCakeAiChat = function (config) {
             messages.scrollTop = messages.scrollHeight;
             renderQuickReplies(data.quickReplies || data.QuickReplies || []);
             historyLoaded = true;
+            const sKey = data.sessionKey || data.SessionKey;
+            if (sKey) initCustomerSignalR(sKey);
         } catch {
             appendMsg('model', 'Chào anh/chị! 🍰 Em tư vấn bánh SweetCakeShop — hỏi em bất cứ điều gì về menu nhé!');
         }
@@ -162,6 +179,10 @@ window.SweetCakeAiChat = function (config) {
             removeTyping();
             const text = data.reply ?? data.Reply ?? 'Không có phản hồi.';
             const products = data.products ?? data.Products;
+            const sKey = data.sessionKey ?? data.SessionKey;
+            if (!customerSessionKey && sKey) {
+                initCustomerSignalR(sKey);
+            }
             appendMsg('model', text, products);
             const qr = data.quickReplies ?? data.QuickReplies;
             if (qr?.length) renderQuickReplies(qr);
@@ -185,4 +206,52 @@ window.SweetCakeAiChat = function (config) {
             send();
         }
     });
+
+    let hubConnection = null;
+    let customerSessionKey = null;
+
+    function initCustomerSignalR(sessionKey) {
+        if (!sessionKey || typeof signalR === 'undefined' || hubConnection) return;
+        customerSessionKey = sessionKey;
+        hubConnection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        hubConnection.on("ReceiveMessage", function (data) {
+            if (data && data.sender && data.sender.toLowerCase() !== 'user') {
+                removeTyping();
+                appendMsg(data.sender, data.text, data.products, true);
+                if (!panel.classList.contains('open')) {
+                    fab.classList.add('ai-fab-unread');
+                    playNotifyBeep();
+                }
+            }
+        });
+
+        hubConnection.start().then(() => {
+            hubConnection.invoke("JoinChatSession", customerSessionKey);
+        }).catch(err => console.error("Customer SignalR error:", err));
+    }
+
+    function playNotifyBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        } catch (_) { }
+    }
+
+    if (config.historyUrl) {
+        setTimeout(() => loadHistory(), 800);
+    }
 };

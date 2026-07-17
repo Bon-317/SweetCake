@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SweetCakeShop.Data;
 using SweetCakeShop.Services;
 using Stripe;
@@ -15,7 +16,10 @@ namespace SweetCakeShop
             // Add services to the container.
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionString));
+            {
+                options.UseSqlServer(connectionString);
+                options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+            });
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
@@ -41,6 +45,7 @@ namespace SweetCakeShop
             });
 
             builder.Services.AddControllersWithViews();
+            builder.Services.AddSignalR();
 
             // Session and cart registration
             builder.Services.AddHttpContextAccessor();
@@ -53,6 +58,7 @@ namespace SweetCakeShop
             builder.Services.AddMemoryCache();
             builder.Services.AddScoped<CartService>();
             builder.Services.AddScoped<OrderService>();
+            builder.Services.AddScoped<IOrderInventoryService, OrderInventoryService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddScoped<IRevenueService, RevenueService>();
             builder.Services.AddScoped<IExportService, ExportService>();
@@ -66,11 +72,6 @@ namespace SweetCakeShop
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IChatPageContextService, ChatPageContextService>();
             builder.Services.AddScoped<IChatSessionService, ChatSessionService>();
-            builder.Services.AddScoped<IIntentRecognitionService, IntentRecognitionService>();
-            builder.Services.AddScoped<IChatQueryExecutor, ChatQueryExecutor>();
-            builder.Services.AddScoped<IAiResponseComposer, AiResponseComposer>();
-            builder.Services.AddScoped<IIntentContextService, IntentContextService>();
-            builder.Services.AddScoped<IAiBusinessDataService, AiBusinessDataService>();
             builder.Services.AddScoped<ICustomerDataService, CustomerDataService>();
             builder.Services.AddScoped<ITopicFilterService, TopicFilterService>();
             builder.Services.AddScoped<IChatSecurityService, ChatSecurityService>();
@@ -81,7 +82,6 @@ namespace SweetCakeShop
             builder.Services.AddScoped<SweetCakeShop.Services.AI.Rag.IConsultantResponseService, SweetCakeShop.Services.AI.Rag.ConsultantResponseService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IWebsiteKnowledgeService, SweetCakeShop.Services.AI.WebsiteKnowledgeService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IChatEnrichmentService, SweetCakeShop.Services.AI.ChatEnrichmentService>();
-            builder.Services.AddScoped<SweetCakeShop.Services.AI.ISemanticFunctionRouterService, SweetCakeShop.Services.AI.SemanticFunctionRouterService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IAiFunctionExecutorService, SweetCakeShop.Services.AI.AiFunctionExecutorService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IProductAnalyticsService, SweetCakeShop.Services.AI.ProductAnalyticsService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IRevenueAnalyticsService, SweetCakeShop.Services.AI.RevenueAnalyticsService>();
@@ -89,9 +89,7 @@ namespace SweetCakeShop
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IOrderAnalyticsService, SweetCakeShop.Services.AI.OrderAnalyticsService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IRecommendationService, SweetCakeShop.Services.AI.RecommendationService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IConversationMemoryService, SweetCakeShop.Services.AI.ConversationMemoryService>();
-            builder.Services.AddScoped<SweetCakeShop.Services.AI.IAIContextBuilderService, SweetCakeShop.Services.AI.AIContextBuilderService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IStructuredAiResponseService, SweetCakeShop.Services.AI.StructuredAiResponseService>();
-            builder.Services.AddScoped<SweetCakeShop.Services.AI.ILlmCompletionService, SweetCakeShop.Services.AI.LlmCompletionService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IChatRoleGuardService, SweetCakeShop.Services.AI.ChatRoleGuardService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.ICartIntentService, SweetCakeShop.Services.AI.CartIntentService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IOrderHandoffService, SweetCakeShop.Services.AI.OrderHandoffService>();
@@ -108,6 +106,8 @@ namespace SweetCakeShop
             builder.Services.AddScoped<SweetCakeShop.Services.Chat.ICustomerProductChatService, SweetCakeShop.Services.Chat.CustomerProductChatService>();
 
             builder.Services.AddHttpClient<IPaymentService, PaymentService>();
+            builder.Services.AddHttpClient<SweetCakeShop.Services.Shipping.IGhnShippingService, SweetCakeShop.Services.Shipping.GhnShippingService>();
+            builder.Services.AddHostedService<OrderStatusAutomationService>();
             builder.Services.AddHttpClient("OpenAI", c => c.Timeout = TimeSpan.FromSeconds(60));
             builder.Services.AddHttpClient("Gemini", c => c.Timeout = TimeSpan.FromSeconds(60));
 
@@ -163,6 +163,7 @@ namespace SweetCakeShop
 
             app.MapStaticAssets();
             app.MapControllers();
+            app.MapHub<SweetCakeShop.Hubs.ChatHub>("/chatHub");
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}")

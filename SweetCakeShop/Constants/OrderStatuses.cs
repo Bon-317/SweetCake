@@ -24,5 +24,11 @@ namespace SweetCakeShop.Constants
             order.Status = Confirmed;
             order.ConfirmedAt = DateTime.Now;
         }
+
+        public static void ApplyPending(Order order)
+        {
+            order.Status = Pending;
+            order.ConfirmedAt = DateTime.Now;
+        }
     }
 }

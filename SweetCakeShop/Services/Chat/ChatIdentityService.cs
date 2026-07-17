@@ -44,6 +44,14 @@ namespace SweetCakeShop.Services.Chat
             return (null, string.IsNullOrWhiteSpace(token) ? null : token);
         }
 
+        public string GetSessionKey()
+        {
+            var (userId, chatToken) = GetIdentity();
+            if (!string.IsNullOrEmpty(userId)) return "usr_" + userId;
+            if (!string.IsNullOrEmpty(chatToken)) return "tok_" + chatToken;
+            return "tok_" + EnsureChatTokenCookie();
+        }
+
         public void ClearChatTokenCookie()
         {
             var ctx = _http.HttpContext;

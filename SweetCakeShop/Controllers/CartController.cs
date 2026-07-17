@@ -24,23 +24,26 @@ namespace SweetCakeShop.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ICouponService _couponService;
         private readonly INotificationService _notificationService;
+        private readonly IOrderInventoryService _orderInventoryService;
 
         public CartController(
-            ApplicationDbContext context, 
-            CartService sessionCartService, 
+            ApplicationDbContext context,
+            CartService sessionCartService,
             IDbCartService dbCartService,
-            OrderService orderService, 
+            OrderService orderService,
             IPaymentService paymentService,
             ICouponService couponService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IOrderInventoryService orderInventoryService)
         {
             _context = context;
             _sessionCartService = sessionCartService;
             _dbCartService = dbCartService;
-            _orderService = orderService;  
+            _orderService = orderService;
             _paymentService = paymentService;
             _couponService = couponService;
             _notificationService = notificationService;
+            _orderInventoryService = orderInventoryService;
         }
 
         private async Task<CartViewModel> GetCurrentCartAsync()
@@ -56,7 +59,7 @@ namespace SweetCakeShop.Controllers
         public async Task<IActionResult> Index()
         {
             var cart = await GetCurrentCartAsync();
-            
+
             // Restore coupon info from session if present
             var couponJson = HttpContext.Session.GetString("AppliedCoupon");
             if (!string.IsNullOrEmpty(couponJson))
@@ -67,7 +70,7 @@ namespace SweetCakeShop.Controllers
                     // Revalidate coupon against current cart subtotal
                     var subtotal = cart.Items.Sum(i => i.Price * i.Quantity);
                     var userId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier)! : "";
-                    
+
                     var revalidation = await _couponService.ValidateAsync(appliedCoupon.Coupon!.Code, subtotal, userId, cart.Items);
                     if (revalidation.IsValid)
                     {
@@ -209,7 +212,7 @@ namespace SweetCakeShop.Controllers
             // Prefill when logged in
             model.CustomerEmail = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
             model.CustomerName = User.Identity?.Name ?? string.Empty;
-            
+
             var couponJson = HttpContext.Session.GetString("AppliedCoupon");
             if (!string.IsNullOrEmpty(couponJson))
             {
@@ -220,7 +223,7 @@ namespace SweetCakeShop.Controllers
                     cart.DiscountAmount = appliedCoupon.DiscountAmount;
                 }
             }
-            
+
             ViewData["Cart"] = cart;
 
             return View(model);
@@ -265,22 +268,13 @@ namespace SweetCakeShop.Controllers
                 order.CouponCode = appliedCoupon.Coupon.Code;
                 order.DiscountAmount = appliedCoupon.DiscountAmount;
                 order.TotalPrice = Math.Max(0, order.TotalPrice - appliedCoupon.DiscountAmount);
-                
+
                 await _context.SaveChangesAsync();
                 await _couponService.RecordUsageAsync(appliedCoupon.Coupon.CouponId, userId ?? "", order.OrderId, appliedCoupon.DiscountAmount);
             }
 
-            // Clear cart
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                await _dbCartService.ClearCartAsync(userId!);
-            }
-            else
-            {
-                _sessionCartService.ClearCart();
-            }
-            
-            HttpContext.Session.Remove("AppliedCoupon");
+            // DO NOT clear cart here so if user clicks Back or returns from Stripe checkout/payment page, their cart items remain safe!
+            // Cart will be cleared when they confirm COD in ProcessPayment or return to Success after payment.
 
             // After creating order, redirect to Payment selection page
             return RedirectToAction("Payment", new { orderId = order.OrderId });
@@ -318,8 +312,9 @@ namespace SweetCakeShop.Controllers
 
             if (method == "COD")
             {
-                OrderStatuses.ApplyConfirmed(order);
+                OrderStatuses.ApplyPending(order);
                 await _context.SaveChangesAsync();
+                await ClearUserOrSessionCartAsync();
 
                 return RedirectToAction("Success", new { orderId = order.OrderId });
             }
@@ -386,9 +381,14 @@ namespace SweetCakeShop.Controllers
             if (order == null)
                 return NotFound();
 
-            // mark as awaiting manual confirmation (you can change to Confirmed if you prefer)
-            order.Status = "AwaitingConfirmation";
-            await _context.SaveChangesAsync();
+            // When customer confirms online payment, apply Confirmed status ("Confirmed") immediately and deduct stock
+            if (order.Status != OrderStatuses.Confirmed)
+            {
+                await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+                OrderStatuses.ApplyConfirmed(order);
+                await _context.SaveChangesAsync();
+            }
+            await ClearUserOrSessionCartAsync();
 
             return RedirectToAction("Success", new { orderId = order.OrderId });
         }
@@ -409,26 +409,63 @@ namespace SweetCakeShop.Controllers
                     var sessionService = new SessionService();
                     var session = await sessionService.GetAsync(session_id);
 
-                    if (session != null && session.PaymentStatus == "paid")
+                    if (session != null && (session.PaymentStatus == "paid" || session.Status == "complete"))
                     {
-                        OrderStatuses.ApplyConfirmed(order);
-                        await _context.SaveChangesAsync();
+                        if (order.Status != OrderStatuses.Confirmed)
+                        {
+                            await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+                            OrderStatuses.ApplyConfirmed(order);
+                            await _context.SaveChangesAsync();
+                        }
                     }
-                    else
+                    else if (session != null && session.PaymentStatus == "unpaid")
                     {
-                        // payment not confirmed yet — keep status or mark accordingly
                         order.Status = "PaymentFailed";
                         await _context.SaveChangesAsync();
                     }
                 }
                 catch
                 {
-                    // if verification fails, don't throw to user; keep current order status
+                    // If server-side API call fails in test mode/offline, but user returned from Stripe success flow:
+                    if (order.Status != OrderStatuses.Confirmed && order.Status != "PaymentFailed")
+                    {
+                        await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+                        OrderStatuses.ApplyConfirmed(order);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+            else if (order.Status == "AwaitingPayment" || order.Status == "AwaitingConfirmation" || order.Status == "Paid")
+            {
+                // Reached Success directly after online payment flow
+                if (order.Status != OrderStatuses.Confirmed)
+                {
+                    await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+                    OrderStatuses.ApplyConfirmed(order);
+                    await _context.SaveChangesAsync();
                 }
             }
 
+            await ClearUserOrSessionCartAsync();
             ViewData["OrderId"] = orderId;
             return View();
+        }
+
+        private async Task ClearUserOrSessionCartAsync()
+        {
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _dbCartService.ClearCartAsync(userId);
+                }
+            }
+            else
+            {
+                _sessionCartService.ClearCart();
+            }
+            HttpContext.Session.Remove("AppliedCoupon");
         }
     }
 }

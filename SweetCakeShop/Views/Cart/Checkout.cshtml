@@ -2,83 +2,134 @@
 @using SweetCakeShop.Models.ViewModels
 
 @{
-    ViewData["Title"] = "Checkout";
+    ViewData["Title"] = "Xác nhận đơn hàng";
     var cart = ViewData["Cart"] as CartViewModel ?? new CartViewModel();
+    var subtotal = cart.Items.Sum(i => i.Price * i.Quantity);
+    var discount = cart.DiscountAmount;
 }
 
 <div class="container my-5">
-    <h2 class="mb-4">Xác nhận đơn hàng</h2>
+    <h2 class="mb-4 text-pink fw-bold"><i class="bi bi-bag-check me-2"></i>Xác nhận đơn hàng</h2>
 
-    <div class="row">
-        <div class="col-md-6">
-            <h5>Thông tin giao hàng</h5>
-            <form asp-action="CheckoutConfirm" method="post">
-                <div class="mb-3">
-                    <label class="form-label">Họ và tên</label>
-                    <input asp-for="CustomerName" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input asp-for="CustomerEmail" class="form-control" type="email" required />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Số điện thoại</label>
-                    <input asp-for="CustomerPhone" class="form-control" required />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Địa chỉ giao hàng</label>
-                    <textarea asp-for="ShippingAddress" class="form-control" rows="3" required></textarea>
-                </div>
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4 p-4">
+                <h5 class="fw-bold mb-4 border-bottom pb-3"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Thông tin giao hàng chi tiết (GHN)</h5>
+                <form asp-action="CheckoutConfirm" method="post" id="checkoutForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ShippingFee" id="ShippingFeeInput" value="0" />
 
-                <div class="d-flex gap-2">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Quay lại giỏ hàng</a>
-                    <button type="submit" class="btn btn-success">Đặt hàng</button>
-                </div>
-            </form>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ và tên <span class="text-danger">*</span></label>
+                        <input asp-for="CustomerName" class="form-control form-control-lg rounded-3" placeholder="Nhập họ và tên người nhận" required />
+                        <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                            <input asp-for="CustomerEmail" class="form-control form-control-lg rounded-3" type="email" placeholder="email@example.com" required />
+                            <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Số điện thoại <span class="text-danger">*</span></label>
+                            <input asp-for="CustomerPhone" class="form-control form-control-lg rounded-3" placeholder="09xxxxxxxx" required />
+                            <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- 4 ô chi tiết địa chỉ bắt buộc chọn theo yêu cầu -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                            <select asp-for="Province" id="ProvinceSelect" name="Province" class="form-select form-select-lg rounded-3" required>
+                                <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                            </select>
+                            <span asp-validation-for="Province" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Quận / Huyện <span class="text-danger">*</span></label>
+                            <select asp-for="District" id="DistrictSelect" name="District" class="form-select form-select-lg rounded-3" required disabled>
+                                <option value="">-- Chọn Quận/Huyện --</option>
+                            </select>
+                            <span asp-validation-for="District" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Phường / Xã <span class="text-danger">*</span></label>
+                            <select asp-for="Ward" id="WardSelect" name="Ward" class="form-select form-select-lg rounded-3" required disabled>
+                                <option value="">-- Chọn Phường/Xã --</option>
+                            </select>
+                            <span asp-validation-for="Ward" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Số nhà, tên đường <span class="text-danger">*</span></label>
+                            <input asp-for="StreetAddress" id="StreetInput" name="StreetAddress" class="form-control form-control-lg rounded-3" placeholder="VD: 123 Đường Lê Lợi" required />
+                            <span asp-validation-for="StreetAddress" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info d-flex align-items-center rounded-3 py-2 mt-2" role="alert">
+                        <i class="bi bi-truck fs-4 me-3 text-primary"></i>
+                        <div>
+                            <small class="d-block text-muted">Đơn vị vận chuyển liên kết:</small>
+                            <strong>Giao Hàng Nhanh (GHN Express) - Tự động tính phí ship theo khu vực</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3 mt-4 pt-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-lg rounded-3 px-4"><i class="bi bi-arrow-left me-2"></i>Quay lại giỏ hàng</a>
+                        <button type="submit" class="btn btn-success btn-lg rounded-3 px-5 fw-bold shadow-sm"><i class="bi bi-check-circle me-2"></i>Tiếp tục tới Thanh toán</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <div class="col-md-6">
-            <h5>Đơn hàng</h5>
-            <table class="table table-bordered">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Sản phẩm</th>
-                        <th>Giá</th>
-                        <th>Số lượng</th>
-                        <th>Thành tiền</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in cart.Items)
-                    {
-                        <tr>
-                            <td>@item.ProductName</td>
-                            <td>@item.Price.ToString("N0") ₫</td>
-                            <td>@item.Quantity</td>
-                            <td>@item.Subtotal.ToString("N0") ₫</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-end fw-bold">Tạm tính:</td>
-                        <td class="fw-bold">@cart.TotalAmount.ToString("N0") ₫</td>
-                    </tr>
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4 p-4 bg-light">
+                <h5 class="fw-bold mb-4 border-bottom pb-3"><i class="bi bi-cart-check me-2"></i>Đơn hàng của bạn (@cart.Items.Sum(i => i.Quantity) món)</h5>
+                <div class="table-responsive mb-3" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                            @foreach (var item in cart.Items)
+                            {
+                                <tr class="border-bottom">
+                                    <td>
+                                        <div class="fw-bold">@item.ProductName</div>
+                                        <small class="text-muted">@item.Price.ToString("N0") ₫ x @item.Quantity</small>
+                                    </td>
+                                    <td class="text-end fw-bold">@item.Subtotal.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="border-top pt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tạm tính:</span>
+                        <span class="fw-bold" id="subtotal-display" data-subtotal="@subtotal">@subtotal.ToString("N0") ₫</span>
+                    </div>
                     @if (!string.IsNullOrEmpty(cart.CouponCode))
                     {
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold text-success">
-                                Mã giảm giá (@cart.CouponCode):
-                            </td>
-                            <td class="fw-bold text-success">-@cart.DiscountAmount.ToString("N0") ₫</td>
-                        </tr>
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Mã giảm giá (@cart.CouponCode):</span>
+                            <span class="fw-bold" id="discount-display" data-discount="@discount">-@discount.ToString("N0") ₫</span>
+                        </div>
                     }
-                    <tr>
-                        <td colspan="3" class="text-end fw-bold fs-5">Tổng cộng:</td>
-                        <td class="fw-bold fs-5 text-pink">@((cart.TotalAmount - cart.DiscountAmount).ToString("N0")) ₫</td>
-                    </tr>
-                </tfoot>
-            </table>
+                    <div class="d-flex justify-content-between mb-3 text-primary">
+                        <span>Phí vận chuyển (GHN):</span>
+                        <span class="fw-bold" id="shipping-fee-display">Chưa tính (hãy chọn địa chỉ)</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fs-5 fw-bold">Tổng cộng:</span>
+                        <span class="fs-4 fw-bold text-pink" id="total-amount-display">@((subtotal - discount).ToString("N0")) ₫</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -87,36 +138,184 @@
     <div id="toast-container"></div>
 </div>
 
-<script>
-    function showToast(message, type = 'info', delay = 3000) {
-        // type: 'info', 'success', 'danger', 'warning'
-        const toastId = 't' + Date.now();
-        const colorClass = {
-            info: 'bg-info text-white',
-            success: 'bg-success text-white',
-            danger: 'bg-danger text-white',
-            warning: 'bg-warning text-dark'
-        }[type] || 'bg-info text-white';
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' ₫';
+        }
 
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `
-            <div id="${toastId}" class="toast ${colorClass} align-items-center border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="${delay}">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
+        function showToast(message, type = 'info', delay = 3500) {
+            const toastId = 't' + Date.now();
+            const colorClass = {
+                info: 'bg-info text-white',
+                success: 'bg-success text-white',
+                danger: 'bg-danger text-white',
+                warning: 'bg-warning text-dark'
+            }[type] || 'bg-info text-white';
+
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <div id="${toastId}" class="toast ${colorClass} align-items-center border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="${delay}">
+                    <div class="d-flex">
+                        <div class="toast-body fw-medium">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>`;
-        document.getElementById('toast-container')?.appendChild(wrapper);
+                </div>`;
+            document.getElementById('toast-container')?.appendChild(wrapper);
 
-        var toastEl = document.getElementById(toastId)
-        var toast = new bootstrap.Toast(toastEl)
-        toast.show()
+            var toastEl = document.getElementById(toastId);
+            var toast = new bootstrap.Toast(toastEl);
+            toast.show();
 
-        // remove after hidden
-        toastEl.addEventListener('hidden.bs.toast', function () {
-            toastEl.remove();
+            toastEl.addEventListener('hidden.bs.toast', function () {
+                toastEl.remove();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const subtotal = parseFloat(document.getElementById('subtotal-display')?.getAttribute('data-subtotal') || '0');
+            const discount = parseFloat(document.getElementById('discount-display')?.getAttribute('data-discount') || '0');
+            const provSelect = document.getElementById('ProvinceSelect');
+            const distSelect = document.getElementById('DistrictSelect');
+            const wardSelect = document.getElementById('WardSelect');
+            const streetInput = document.getElementById('StreetInput');
+            const feeInput = document.getElementById('ShippingFeeInput');
+            const feeDisplay = document.getElementById('shipping-fee-display');
+            const totalDisplay = document.getElementById('total-amount-display');
+
+            // 1. Tải danh sách Tỉnh/Thành phố từ API provinces.open-api.vn
+            try {
+                const resp = await fetch('https://provinces.open-api.vn/api/p/');
+                if (resp.ok) {
+                    const provinces = await resp.json();
+                    provinces.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.name;
+                        opt.textContent = p.name;
+                        opt.setAttribute('data-code', p.code);
+                        provSelect.appendChild(opt);
+                    });
+                } else {
+                    showToast('Không tải được danh sách tỉnh thành', 'warning');
+                }
+            } catch (err) {
+                console.error('Lỗi tải provinces:', err);
+                showToast('Lỗi kết nối tải tỉnh thành', 'warning');
+            }
+
+            // 2. Khi thay đổi Tỉnh/Thành phố -> Tải Quận/Huyện
+            provSelect.addEventListener('change', async function () {
+                distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                distSelect.disabled = true;
+                wardSelect.disabled = true;
+                feeInput.value = 0;
+                feeDisplay.textContent = 'Chưa tính (hãy chọn địa chỉ)';
+                totalDisplay.textContent = formatCurrency(subtotal - discount);
+
+                const selectedOption = provSelect.options[provSelect.selectedIndex];
+                const provinceCode = selectedOption?.getAttribute('data-code');
+
+                if (provinceCode) {
+                    try {
+                        distSelect.disabled = false;
+                        distSelect.innerHTML = '<option value="">Đang tải Quận/Huyện...</option>';
+                        const resp = await fetch(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            const districts = data.districts || [];
+                            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                            districts.forEach(d => {
+                                const opt = document.createElement('option');
+                                opt.value = d.name;
+                                opt.textContent = d.name;
+                                opt.setAttribute('data-code', d.code);
+                                distSelect.appendChild(opt);
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Lỗi tải districts:', err);
+                        distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                    }
+                }
+            });
+
+            // 3. Khi thay đổi Quận/Huyện -> Tải Phường/Xã
+            distSelect.addEventListener('change', async function () {
+                wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                wardSelect.disabled = true;
+                feeInput.value = 0;
+                feeDisplay.textContent = 'Chưa tính (hãy chọn địa chỉ)';
+                totalDisplay.textContent = formatCurrency(subtotal - discount);
+
+                const selectedOption = distSelect.options[distSelect.selectedIndex];
+                const districtCode = selectedOption?.getAttribute('data-code');
+
+                if (districtCode) {
+                    try {
+                        wardSelect.disabled = false;
+                        wardSelect.innerHTML = '<option value="">Đang tải Phường/Xã...</option>';
+                        const resp = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            const wards = data.wards || [];
+                            wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                            wards.forEach(w => {
+                                const opt = document.createElement('option');
+                                opt.value = w.name;
+                                opt.textContent = w.name;
+                                opt.setAttribute('data-code', w.code);
+                                wardSelect.appendChild(opt);
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Lỗi tải wards:', err);
+                        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                    }
+                }
+            });
+
+            // 4. Khi thay đổi Phường/Xã -> Tính phí vận chuyển
+            wardSelect.addEventListener('change', async function () {
+                const distOption = distSelect.options[distSelect.selectedIndex];
+                const wardOption = wardSelect.options[wardSelect.selectedIndex];
+                const districtCode = distOption?.getAttribute('data-code') || 0;
+                const wardCode = wardOption?.getAttribute('data-code') || '';
+                const provinceName = provSelect.value;
+                const districtName = distSelect.value;
+
+                if (districtCode && wardCode) {
+                    feeDisplay.innerHTML = '<span class="spinner-border spinner-border-sm text-primary" role="status"></span> Đang tính phí...';
+                    try {
+                        const resp = await fetch(`/api/shipping/calculate-fee?toDistrictId=${districtCode}&toWardCode=${wardCode}&provinceName=${encodeURIComponent(provinceName)}&districtName=${encodeURIComponent(districtName)}`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            const fee = parseFloat(data.fee || 0);
+                            feeInput.value = fee;
+                            feeDisplay.textContent = formatCurrency(fee);
+                            totalDisplay.textContent = formatCurrency(subtotal + fee - discount);
+                            showToast(`Đã tính phí giao hàng tự động: ${formatCurrency(fee)}`, 'success');
+                        } else {
+                            feeDisplay.textContent = 'Lỗi tính phí';
+                        }
+                    } catch (err) {
+                        console.error('Lỗi tính phí:', err);
+                        feeDisplay.textContent = 'Lỗi tính phí';
+                    }
+                }
+            });
+
+            // 5. Ràng buộc bắt buộc nhập đủ 4 ô mới cho đặt hàng
+            document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+                if (!provSelect.value || !distSelect.value || !wardSelect.value || !streetInput.value.trim()) {
+                    e.preventDefault();
+                    showToast('Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và nhập Số nhà!', 'danger');
+                    return false;
+                }
+            });
         });
-    }
-</script>
+    </script>
+}

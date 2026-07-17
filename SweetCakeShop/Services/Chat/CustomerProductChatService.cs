@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.SignalR;
+using SweetCakeShop.Hubs;
 using SweetCakeShop.Models.Api;
 using SweetCakeShop.Services.AI;
 using SweetCakeShop.Services.AI.Rag;
@@ -21,6 +23,7 @@ namespace SweetCakeShop.Services.Chat
         private readonly IOpenAiChatApiService _openAi;
         private readonly ITopicFilterService _topicFilter;
         private readonly IChatSecurityService _security;
+        private readonly IHubContext<ChatHub> _hubContext;
 
         public CustomerProductChatService(
             IChatIdentityService identity,
@@ -31,7 +34,8 @@ namespace SweetCakeShop.Services.Chat
             IGeminiChatApiService gemini,
             IOpenAiChatApiService openAi,
             ITopicFilterService topicFilter,
-            IChatSecurityService security)
+            IChatSecurityService security,
+            IHubContext<ChatHub> hubContext)
         {
             _identity = identity;
             _history = history;
@@ -42,18 +46,21 @@ namespace SweetCakeShop.Services.Chat
             _openAi = openAi;
             _topicFilter = topicFilter;
             _security = security;
+            _hubContext = hubContext;
         }
 
         public async Task<ChatHistoryResponse> GetChatHistoryAsync(CancellationToken ct = default)
         {
             await _merge.TryMergeOnAuthenticatedRequestAsync(ct);
             _identity.EnsureChatTokenCookie();
+            var sessionKey = _identity.GetSessionKey();
 
             var has = await _history.HasAnyMessagesAsync(ct);
             if (!has)
             {
                 return new ChatHistoryResponse
                 {
+                    SessionKey = sessionKey,
                     Messages =
                     [
                         new ChatMessageDto { Sender = "model", Content = WelcomeMessage, CreatedAt = DateTime.UtcNow }
@@ -65,6 +72,7 @@ namespace SweetCakeShop.Services.Chat
             var messages = await _history.GetHistoryForUiAsync(ct);
             return new ChatHistoryResponse
             {
+                SessionKey = sessionKey,
                 Messages = messages,
                 QuickReplies = ChatProductCardMapper.DefaultCustomerQuickReplies()
             };
@@ -74,19 +82,30 @@ namespace SweetCakeShop.Services.Chat
             SendChatMessageRequest request, CancellationToken ct = default)
         {
             var text = (request.UserMessage ?? "").Trim();
+            var sessionKey = _identity.GetSessionKey();
             if (string.IsNullOrWhiteSpace(text) || text.Length > 2000)
-                return new SendChatMessageResponse { Success = false, Reply = "Tin nhắn không hợp lệ." };
+                return new SendChatMessageResponse { Success = false, SessionKey = sessionKey, Reply = "Tin nhắn không hợp lệ." };
 
             await _merge.TryMergeOnAuthenticatedRequestAsync(ct);
             _identity.EnsureChatTokenCookie();
+            sessionKey = _identity.GetSessionKey();
 
             if (_topicFilter.IsClearlyOffTopic(text))
-                return new SendChatMessageResponse { Success = true, Reply = _topicFilter.GetRejectionMessage("vi") };
+                return new SendChatMessageResponse { Success = true, SessionKey = sessionKey, Reply = _topicFilter.GetRejectionMessage("vi") };
 
             if (_security.IsRestrictedRequest(text))
-                return new SendChatMessageResponse { Success = true, Reply = _security.GetStaffRejectionMessage("vi", AiChatMode.Customer) };
+                return new SendChatMessageResponse { Success = true, SessionKey = sessionKey, Reply = _security.GetStaffRejectionMessage("vi", AiChatMode.Customer) };
 
             await _history.AddUserMessageAsync(text, request.ProductId, ct);
+
+            await _hubContext.Clients.Group("AdminRoom").SendAsync("ReceiveCustomerMessage", new
+            {
+                sessionKey = sessionKey,
+                sender = "user",
+                text = text,
+                timestamp = DateTime.Now.ToString("HH:mm")
+            }, ct);
+
             var recent = await _history.GetRecentAsync(6, ct);
 
             var resolved = await _resolver.ResolveAsync(text, request.ProductId, recent, ct);
@@ -109,9 +128,26 @@ namespace SweetCakeShop.Services.Chat
 
             await _history.AddModelMessageAsync(reply, ct);
 
+            await _hubContext.Clients.Group("AdminRoom").SendAsync("ReceiveCustomerMessage", new
+            {
+                sessionKey = sessionKey,
+                sender = "model",
+                text = reply,
+                timestamp = DateTime.Now.ToString("HH:mm")
+            }, ct);
+
+            await _hubContext.Clients.Group(sessionKey).SendAsync("ReceiveMessage", new
+            {
+                sender = "model",
+                text = reply,
+                products = products,
+                timestamp = DateTime.Now.ToString("HH:mm")
+            }, ct);
+
             return new SendChatMessageResponse
             {
                 Success = true,
+                SessionKey = sessionKey,
                 Reply = reply,
                 Products = products,
                 QuickReplies = request.ProductId.HasValue

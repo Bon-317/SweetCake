@@ -119,6 +119,25 @@ body.admin-body {
     color: #fff;
 }
 
+.ai-fab-unread::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 14px;
+    height: 14px;
+    background-color: #ff0000;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: pulse-red 1.2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(255, 0, 0, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+}
+
 .ai-chat-panel {
     position: fixed;
     bottom: 96px;
@@ -279,6 +298,14 @@ body.admin-body {
 .ai-msg.bot .bubble {
     background: #fff;
     border: 1px solid #eee;
+}
+
+.ai-msg.admin .bubble {
+    background: linear-gradient(135deg, #fff8db, #ffe8a1);
+    border: 1.5px solid #ffca2c;
+    color: #432800;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.25);
+    font-weight: 500;
 }
 
 .ai-typing-indicator .typing-dots {

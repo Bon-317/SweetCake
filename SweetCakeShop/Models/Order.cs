@@ -14,12 +14,20 @@ namespace SweetCakeShop.Models
         public string CustomerEmail { get; set; } = string.Empty;
         public string CustomerPhone { get; set; } = string.Empty;
         public string ShippingAddress { get; set; } = string.Empty;
+        public string Province { get; set; } = string.Empty;
+        public string District { get; set; } = string.Empty;
+        public string Ward { get; set; } = string.Empty;
+        public string StreetAddress { get; set; } = string.Empty;
+        public decimal ShippingFee { get; set; }
         public bool IsGuest { get; set; } = true;
 
         public DateTime OrderDate { get; set; } = DateTime.Now;
         public DateTime? ConfirmedAt { get; set; }
+        public DateTime? ShippedAt { get; set; }
+        public DateTime? DeliveredAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
         public decimal TotalPrice { get; set; }
-        public string Status { get; set; } = "Pending";     // Pending, Confirmed, Shipped, Delivered, Cancelled
+        public string Status { get; set; } = "Pending";     // Pending, Confirmed, Shipped, Delivered, Completed, Cancelled
 
         // Coupon / discount tracking
         public int? CouponId { get; set; }

@@ -1,0 +1,340 @@
+@{
+    ViewData["Title"] = "Quản lý Chat Trực tiếp (Real-time)";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gray-800 fw-bold">💬 Hỗ trợ Khách hàng Trực tiếp (Live Chat)</h1>
+            <p class="text-muted mb-0">Tin nhắn giữa Khách hàng và Admin được cập nhật real-time không cần tải lại trang.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success d-flex align-items-center gap-1 py-2 px-3 rounded-pill shadow-sm">
+                <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
+                SignalR Real-time Connected
+            </span>
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="loadSessions()">🔄 Làm mới danh sách</button>
+        </div>
+    </div>
+
+    <div class="row g-4" style="height: calc(100vh - 220px); min-height: 500px;">
+        <!-- Left: Sessions List -->
+        <div class="col-12 col-md-4 col-lg-3 h-100">
+            <div class="card shadow border-0 rounded-4 h-100 d-flex flex-column">
+                <div class="card-header bg-white border-bottom py-3 px-4 rounded-top-4 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold text-dark">📋 Khách đang nhắn (<span id="sessionCount">0</span>)</h6>
+                </div>
+                <div class="card-body p-0 overflow-auto flex-grow-1" id="sessionsList">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border text-pink mb-2" role="status"></div>
+                        <p class="small m-0">Đang tải danh sách phiên...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Chat Box -->
+        <div class="col-12 col-md-8 col-lg-9 h-100">
+            <div class="card shadow border-0 rounded-4 h-100 d-flex flex-column" id="chatBoxContainer">
+                <!-- Empty State -->
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center text-muted flex-grow-1" id="chatEmptyState">
+                    <div class="display-1 mb-3">🍰</div>
+                    <h5 class="fw-bold text-dark">Chọn một cuộc trò chuyện từ danh sách bên trái</h5>
+                    <p class="small text-muted max-w-sm">Khi khách hàng gửi tin nhắn mới, bạn sẽ nhận được thông báo ngay lập tức trên màn hình này.</p>
+                </div>
+
+                <!-- Active Chat Header -->
+                <div class="card-header bg-white border-bottom py-3 px-4 rounded-top-4 d-none justify-content-between align-items-center" id="chatHeader">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-circle bg-pink text-white fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.1rem;">👤</div>
+                        <div>
+                            <h6 class="m-0 fw-bold text-dark" id="currentSessionTitle">Khách hàng</h6>
+                            <small class="text-muted d-block" id="currentSessionSubtitle">Đang kết nối trực tiếp...</small>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small">Mã phiên: <strong id="currentSessionKeyBadge">---</strong></span>
+                    </div>
+                </div>
+
+                <!-- Messages Body -->
+                <div class="card-body p-4 overflow-auto flex-grow-1 d-none bg-light bg-opacity-50" id="chatMessages" style="max-height: calc(100vh - 360px);"></div>
+
+                <!-- Input Footer -->
+                <div class="card-footer bg-white border-top p-3 rounded-bottom-4 d-none" id="chatFooter">
+                    <form id="replyForm" class="d-flex gap-2 m-0" onsubmit="sendReply(event)">
+                        <input type="text" class="form-control rounded-pill px-4 py-2" id="replyInput" placeholder="Nhập tin nhắn trả lời trực tiếp cho khách hàng..." autocomplete="off" />
+                        <button type="submit" class="btn btn-scs-pink rounded-pill px-4 fw-semibold d-flex align-items-center gap-2" id="replyBtn">
+                            <span>Gửi ngay</span>
+                            <span>➤</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle.bg-pink { background: linear-gradient(135deg, #ff6b81, #ff4757); }
+    .session-item { cursor: pointer; transition: all 0.2s ease; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .session-item:hover { background-color: #fff0f3 !important; }
+    .session-item.active { background-color: #ffe3e8 !important; border-left: 4px solid #ff4757; }
+    .live-msg { max-width: 75%; margin-bottom: 1rem; clear: both; }
+    .live-msg.user { float: left; }
+    .live-msg.bot { float: left; }
+    .live-msg.admin { float: right; }
+    .live-bubble { padding: 0.75rem 1.25rem; border-radius: 1.25rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); word-break: break-word; }
+    .live-msg.user .live-bubble { background: #ffffff; color: #2d3436; border-bottom-left-radius: 0.25rem; border: 1px solid #ededed; }
+    .live-msg.bot .live-bubble { background: #f1f2f6; color: #2f3542; border-bottom-left-radius: 0.25rem; }
+    .live-msg.admin .live-bubble { background: linear-gradient(135deg, #ff6b81, #ff4757); color: #ffffff; border-bottom-right-radius: 0.25rem; }
+    .live-sender-label { font-size: 0.75rem; margin-bottom: 0.25rem; opacity: 0.7; }
+    .live-msg.admin .live-sender-label { text-align: right; }
+    .unread-dot { width: 10px; height: 10px; background: #ff4757; border-radius: 50%; display: inline-block; }
+</style>
+
+@section Scripts {
+<script>
+    let currentSessionKey = null;
+    let sessionsMap = {};
+    let signalRConnection = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadSessions();
+        initSignalR();
+    });
+
+    function initSignalR() {
+        if (typeof signalR === 'undefined') {
+            console.error("SignalR chưa được tải!");
+            return;
+        }
+
+        signalRConnection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        signalRConnection.on("ReceiveCustomerMessage", (data) => {
+            // data: { sessionKey, sender, text, timestamp }
+            console.log("Real-time customer message received:", data);
+            
+            // Update or add to sessions list
+            if (!sessionsMap[data.sessionKey]) {
+                sessionsMap[data.sessionKey] = {
+                    sessionKey: data.sessionKey,
+                    lastMessage: data.text,
+                    lastSender: data.sender,
+                    lastUpdated: data.timestamp,
+                    count: 1,
+                    unread: true
+                };
+            } else {
+                sessionsMap[data.sessionKey].lastMessage = data.text;
+                sessionsMap[data.sessionKey].lastSender = data.sender;
+                sessionsMap[data.sessionKey].lastUpdated = data.timestamp;
+                if (currentSessionKey !== data.sessionKey) {
+                    sessionsMap[data.sessionKey].unread = true;
+                }
+            }
+            renderSessionsList();
+
+            // If current session is open, append message right into the chat box immediately
+            if (currentSessionKey === data.sessionKey) {
+                appendLiveMsg(data.sender, data.text, data.timestamp);
+            } else {
+                // Play subtle audio/notification for new incoming message
+                playNotifySound();
+            }
+        });
+
+        signalRConnection.on("ReceiveAdminReplyConfirmation", (data) => {
+            if (sessionsMap[data.sessionKey]) {
+                sessionsMap[data.sessionKey].lastMessage = data.text;
+                sessionsMap[data.sessionKey].lastSender = "Admin";
+                renderSessionsList();
+            }
+            if (currentSessionKey === data.sessionKey && data.sender === "Admin") {
+                // Already appended locally when sent or if sent from another admin window
+            }
+        });
+
+        signalRConnection.start().then(() => {
+            console.log("Admin connected to SignalR ChatHub.");
+            signalRConnection.invoke("JoinAdminRoom");
+        }).catch(err => console.error("SignalR connect error:", err));
+    }
+
+    async function loadSessions() {
+        try {
+            const res = await fetch('/api/Chat/admin/sessions', { credentials: 'include' });
+            const data = await res.json();
+            if (data.success && data.sessions) {
+                sessionsMap = {};
+                data.sessions.forEach(s => {
+                    sessionsMap[s.sessionKey] = s;
+                });
+                renderSessionsList();
+            }
+        } catch (e) {
+            console.error("Lỗi tải danh sách phiên:", e);
+            document.getElementById('sessionsList').innerHTML = '<div class="p-4 text-center text-danger small">Không thể tải danh sách phiên.</div>';
+        }
+    }
+
+    function renderSessionsList() {
+        const listEl = document.getElementById('sessionsList');
+        const countEl = document.getElementById('sessionCount');
+        const sessions = Object.values(sessionsMap);
+        countEl.textContent = sessions.length;
+
+        if (sessions.length === 0) {
+            listEl.innerHTML = '<div class="p-4 text-center text-muted small">Chưa có phiên chat nào.</div>';
+            return;
+        }
+
+        listEl.innerHTML = sessions.map(s => {
+            const isSelected = currentSessionKey === s.sessionKey ? 'active' : '';
+            const unreadBadge = s.unread ? '<span class="unread-dot"></span>' : '';
+            const displayId = s.sessionKey.startsWith('usr_') ? 'Khách #' + s.sessionKey.substring(4, 12) : 'Khách Vãng Lai #' + s.sessionKey.substring(4, 10);
+            return `
+                <div class="session-item p-3 ${isSelected}" onclick="selectSession('${s.sessionKey}')">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-dark d-flex align-items-center gap-2">${displayId} ${unreadBadge}</span>
+                        <small class="text-muted" style="font-size: 0.75rem;">${s.lastUpdated || ''}</small>
+                    </div>
+                    <div class="text-truncate text-muted small">
+                        <strong>${s.lastSender === 'user' ? 'Khách' : (s.lastSender === 'Admin' ? 'Bạn' : 'AI')}:</strong> ${escapeHtml(s.lastMessage || '')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function selectSession(sessionKey) {
+        currentSessionKey = sessionKey;
+        if (sessionsMap[sessionKey]) {
+            sessionsMap[sessionKey].unread = false;
+        }
+        renderSessionsList();
+
+        document.getElementById('chatEmptyState').classList.add('d-none');
+        document.getElementById('chatHeader').classList.remove('d-none');
+        document.getElementById('chatHeader').classList.add('d-flex');
+        document.getElementById('chatMessages').classList.remove('d-none');
+        document.getElementById('chatFooter').classList.remove('d-none');
+
+        const displayId = sessionKey.startsWith('usr_') ? 'Khách hàng (Tài khoản ID: ' + sessionKey.substring(4) + ')' : 'Khách hàng Vãng lai (Token: ' + sessionKey.substring(4, 12) + '...)';
+        document.getElementById('currentSessionTitle').textContent = displayId;
+        document.getElementById('currentSessionKeyBadge').textContent = sessionKey.substring(0, 16) + '...';
+
+        const messagesEl = document.getElementById('chatMessages');
+        messagesEl.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border text-pink mb-2" role="status"></div><p class="small m-0">Đang tải lịch sử trò chuyện...</p></div>';
+
+        try {
+            const res = await fetch(`/api/Chat/admin/history?sessionKey=${encodeURIComponent(sessionKey)}`, { credentials: 'include' });
+            const data = await res.json();
+            messagesEl.innerHTML = '<div class="clearfix"></div>';
+            if (data.success && data.messages) {
+                data.messages.forEach(m => {
+                    const timeStr = new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                    appendLiveMsg(m.sender, m.content, timeStr);
+                });
+            }
+        } catch (e) {
+            console.error("Lỗi tải lịch sử chat:", e);
+            messagesEl.innerHTML = '<div class="p-4 text-center text-danger">Không thể tải lịch sử trò chuyện.</div>';
+        }
+    }
+
+    function appendLiveMsg(sender, text, timestamp = '') {
+        const messagesEl = document.getElementById('chatMessages');
+        if (!messagesEl) return;
+
+        let roleClass = 'bot';
+        let senderName = '🤖 AI Trợ lý tự động';
+        if (sender && sender.toLowerCase() === 'user') {
+            roleClass = 'user';
+            senderName = '👤 Khách hàng';
+        } else if (sender && sender.toLowerCase() === 'admin') {
+            roleClass = 'admin';
+            senderName = '👑 Bạn (Admin hỗ trợ giải quyết vấn đề)';
+        }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `live-msg ${roleClass}`;
+        msgDiv.innerHTML = `
+            <div class="live-sender-label fw-semibold">${senderName} · ${timestamp}</div>
+            <div class="live-bubble">${escapeHtml(text)}</div>
+        `;
+        messagesEl.appendChild(msgDiv);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function sendReply(event) {
+        event.preventDefault();
+        const input = document.getElementById('replyInput');
+        const btn = document.getElementById('replyBtn');
+        const text = input.value.trim();
+        if (!text || !currentSessionKey) return;
+
+        input.value = '';
+        btn.disabled = true;
+
+        // Immediately append admin reply locally for responsive feel
+        const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        appendLiveMsg('Admin', text, timeStr);
+        if (sessionsMap[currentSessionKey]) {
+            sessionsMap[currentSessionKey].lastMessage = text;
+            sessionsMap[currentSessionKey].lastSender = 'Admin';
+            renderSessionsList();
+        }
+
+        try {
+            const res = await fetch('/api/Chat/admin/reply-customer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionKey: currentSessionKey,
+                    message: text
+                }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('Gửi tin nhắn thất bại!');
+            }
+        } catch (e) {
+            console.error("Lỗi gửi tin nhắn trả lời:", e);
+            alert('Lỗi khi gửi tin nhắn!');
+        } finally {
+            btn.disabled = false;
+            input.focus();
+        }
+    }
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function playNotifySound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        } catch (e) { /* ignore if blocked by browser */ }
+    }
+</script>
+}

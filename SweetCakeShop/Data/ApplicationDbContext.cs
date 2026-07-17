@@ -46,6 +46,10 @@ namespace SweetCakeShop.Data
                 .Property(o => o.TotalPrice)
                 .HasPrecision(18, 2);
 
+            builder.Entity<Order>()
+                .Property(o => o.ShippingFee)
+                .HasPrecision(18, 2);
+
             builder.Entity<OrderDetail>()
                 .Property(od => od.Price)
                 .HasPrecision(18, 2);
