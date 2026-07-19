@@ -1,0 +1,709 @@
+@model SweetCakeShop.Models.ViewModels.AboutViewModel
+@using SweetCakeShop.Models.ViewModels
+
+@{
+    ViewData["Title"] = "Giới thiệu - SweetCake";
+}
+
+@* ─────────────────────────────────────────────────────────────────
+   Styles riêng cho trang About
+────────────────────────────────────────────────────────────────── *@
+<style>
+    /* ── Pastel palette ── */
+    :root {
+        --pink-soft:   #fce4ec;
+        --pink-main:   #f48fb1;
+        --pink-dark:   #c2185b;
+        --pink-mid:    #e91e8c;
+        --cream:       #fff8f0;
+        --text-dark:   #2d1b2e;
+    }
+
+    /* ── Hero ── */
+    .about-hero {
+        background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 40%, #f48fb1 100%);
+        padding: 100px 0 80px;
+        position: relative;
+        overflow: hidden;
+    }
+    .about-hero::before {
+        content: '';
+        position: absolute;
+        width: 500px; height: 500px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.18);
+        top: -150px; right: -100px;
+    }
+    .about-hero::after {
+        content: '';
+        position: absolute;
+        width: 300px; height: 300px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.12);
+        bottom: -80px; left: -60px;
+    }
+    .about-hero h1 { color: var(--pink-dark); font-size: 3.2rem; font-weight: 900; letter-spacing: -1px; }
+    .about-hero .lead { color: #880e4f; font-size: 1.25rem; }
+
+    /* ── Section headings ── */
+    .section-title {
+        font-size: 2rem; font-weight: 800; color: var(--text-dark);
+        position: relative; display: inline-block; margin-bottom: 0.4rem;
+    }
+    .section-title::after {
+        content: '';
+        display: block;
+        width: 60px; height: 4px;
+        background: var(--pink-main);
+        border-radius: 2px;
+        margin: 8px auto 0;
+    }
+    .section-subtitle { color: #888; font-size: 1rem; }
+
+    /* ── Brand story ── */
+    .brand-section { background: var(--cream); }
+    .brand-img { border-radius: 20px; box-shadow: 0 20px 60px rgba(244,143,177,.35); }
+    .timeline-dot {
+        width: 14px; height: 14px; border-radius: 50%;
+        background: var(--pink-main); flex-shrink: 0; margin-top: 5px;
+    }
+
+    /* ── Why choose ── */
+    .why-card {
+        border: none; border-radius: 20px; padding: 2rem 1.5rem;
+        text-align: center; transition: transform .3s, box-shadow .3s;
+        background: #fff;
+        box-shadow: 0 4px 24px rgba(244,143,177,.18);
+    }
+    .why-card:hover { transform: translateY(-8px); box-shadow: 0 12px 40px rgba(244,143,177,.38); }
+    .why-icon {
+        font-size: 2.8rem; margin-bottom: 1rem;
+        display: inline-block; line-height: 1;
+    }
+    .why-card h5 { color: var(--pink-dark); font-weight: 700; }
+
+    /* ── Products ── */
+    .product-card {
+        border: none; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08); transition: transform .3s, box-shadow .3s;
+    }
+    .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(244,143,177,.32); }
+    .product-card img { height: 200px; object-fit: cover; width: 100%; }
+    .product-card .card-body { padding: 1rem 1.2rem; }
+    .badge-cat { background: var(--pink-soft); color: var(--pink-dark); font-size: .7rem; border-radius: 20px; padding: .25rem .75rem; font-weight: 600; }
+
+    /* ── News ── */
+    .news-card {
+        border: none; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08); transition: transform .3s;
+    }
+    .news-card:hover { transform: translateY(-5px); }
+    .news-card img { height: 200px; object-fit: cover; width: 100%; }
+    .news-date { font-size: .82rem; color: var(--pink-main); font-weight: 600; }
+
+    /* ── Promotions ── */
+    .promo-card {
+        border: none; border-radius: 20px; overflow: hidden; position: relative;
+        box-shadow: 0 6px 30px rgba(244,143,177,.28); transition: transform .3s;
+        background: linear-gradient(135deg, #fce4ec, #fff);
+    }
+    .promo-card:hover { transform: translateY(-5px); }
+    .promo-badge {
+        position: absolute; top: 16px; right: 16px;
+        background: var(--pink-dark); color: #fff;
+        font-size: .72rem; font-weight: 700; padding: .3rem .75rem;
+        border-radius: 20px; letter-spacing: .5px;
+    }
+    .promo-discount {
+        font-size: 3rem; font-weight: 900; color: var(--pink-dark); line-height: 1;
+    }
+    .promo-img { height: 180px; object-fit: cover; width: 100%; }
+    .promo-countdown { font-size: .8rem; color: #888; }
+
+    /* ── Testimonials ── */
+    .testimonials-section { background: linear-gradient(135deg, #fce4ec 0%, #fdf2f8 100%); }
+    .testi-card {
+        background: #fff; border-radius: 20px; padding: 2rem;
+        box-shadow: 0 4px 24px rgba(244,143,177,.2); position: relative;
+    }
+    .testi-card::before {
+        content: '\201C'; font-size: 5rem; color: var(--pink-soft);
+        position: absolute; top: -10px; left: 20px; line-height: 1; font-family: Georgia, serif;
+    }
+    .testi-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 3px solid var(--pink-main); }
+    .star-rating { color: #ffc107; font-size: 1rem; }
+
+    /* ── Gallery ── */
+    .gallery-img {
+        border-radius: 14px; overflow: hidden; cursor: pointer;
+        transition: transform .3s, box-shadow .3s;
+    }
+    .gallery-img:hover { transform: scale(1.04); box-shadow: 0 10px 40px rgba(244,143,177,.45); }
+    .gallery-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* ── FAQ ── */
+    .faq-section { background: var(--cream); }
+    .accordion-button:not(.collapsed) { background: var(--pink-soft); color: var(--pink-dark); font-weight: 700; }
+    .accordion-button:focus { box-shadow: 0 0 0 .2rem rgba(244,143,177,.4); }
+    .accordion-item { border: 1px solid #fce4ec; border-radius: 12px !important; margin-bottom: .75rem; overflow: hidden; }
+
+    /* ── Newsletter ── */
+    .newsletter-section {
+        background: linear-gradient(135deg, var(--pink-dark) 0%, #e91e8c 100%);
+        color: #fff;
+    }
+    .newsletter-input {
+        border: none; border-radius: 50px; padding: .85rem 1.5rem;
+        font-size: 1rem; width: 100%; max-width: 460px;
+    }
+    .newsletter-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.4); }
+    .btn-newsletter {
+        background: #fff; color: var(--pink-dark); font-weight: 700;
+        border: none; border-radius: 50px; padding: .85rem 2rem;
+        transition: background .2s, color .2s;
+    }
+    .btn-newsletter:hover { background: var(--pink-soft); color: var(--pink-dark); }
+</style>
+
+@* ══════════════════════════════════════════════════════
+   1. HERO BANNER
+══════════════════════════════════════════════════════ *@
+<section class="about-hero">
+    <div class="container text-center position-relative" style="z-index:1;">
+        <span class="badge rounded-pill mb-3" style="background:rgba(255,255,255,.35);color:#880e4f;font-size:.95rem;padding:.5rem 1.2rem;font-weight:600;">
+            🍰 Chào mừng đến với SweetCake
+        </span>
+        <h1 class="mb-3">Ngọt ngào trong từng khoảnh khắc</h1>
+        <p class="lead mb-4 mx-auto" style="max-width:560px;">
+            Mỗi chiếc bánh là một câu chuyện — được làm từ tình yêu, nguyên liệu tươi chọn lọc
+            và hơn 10 năm kinh nghiệm của các nghệ nhân bánh.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a asp-controller="Products" asp-action="IndexPro"
+               class="btn btn-lg px-4 py-2 rounded-pill fw-bold"
+               style="background:var(--pink-dark);color:#fff;border:none;">
+                🛍 Khám phá sản phẩm
+            </a>
+            <a href="#about-brand"
+               class="btn btn-lg px-4 py-2 rounded-pill fw-bold"
+               style="background:rgba(255,255,255,.45);color:#880e4f;border:none;backdrop-filter:blur(4px);">
+                Tìm hiểu thêm ↓
+            </a>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   2. GIỚI THIỆU THƯƠNG HIỆU
+══════════════════════════════════════════════════════ *@
+<section id="about-brand" class="brand-section py-5">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <img src="~/images/about.jpg" alt="SweetCake bakery" class="img-fluid brand-img w-100"
+                     onerror="this.src='/images/sp1.jpg'" />
+            </div>
+            <div class="col-lg-7">
+                <span class="text-uppercase fw-bold mb-2 d-block" style="color:var(--pink-main);letter-spacing:2px;font-size:.85rem;">Câu chuyện của chúng tôi</span>
+                <h2 class="section-title text-start mb-3" style="font-size:2.2rem;">Về SweetCake</h2>
+                <p class="text-muted mb-4" style="line-height:1.8;font-size:1.05rem;">
+                    SweetCake được thành lập từ năm 2015 bởi một nhóm đam mê nghệ thuật làm bánh.
+                    Chúng tôi tin rằng mỗi chiếc bánh là một khoảnh khắc hạnh phúc — từ sinh nhật,
+                    đám cưới đến những buổi chiều thư giãn bên gia đình.
+                </p>
+                <p class="text-muted mb-5" style="line-height:1.8;font-size:1.05rem;">
+                    Với hơn <strong>50.000 khách hàng hài lòng</strong> và hàng trăm công thức bánh độc quyền,
+                    SweetCake tự hào là thương hiệu bánh ngọt được yêu thích nhất tại Việt Nam.
+                </p>
+
+                <!-- Timeline -->
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex gap-3">
+                        <div class="timeline-dot mt-1"></div>
+                        <div>
+                            <strong style="color:var(--pink-dark);">2015 – Khởi đầu nhỏ bé</strong>
+                            <p class="mb-0 text-muted small">Một tiệm bánh nhỏ ở Quận 1, TP.HCM với 3 thợ bánh và 10 công thức.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="timeline-dot mt-1"></div>
+                        <div>
+                            <strong style="color:var(--pink-dark);">2019 – Mở rộng toàn quốc</strong>
+                            <p class="mb-0 text-muted small">Giao bánh toàn quốc qua dịch vụ vận chuyển lạnh độc quyền.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="timeline-dot mt-1"></div>
+                        <div>
+                            <strong style="color:var(--pink-dark);">2024 – Nền tảng online</strong>
+                            <p class="mb-0 text-muted small">Ra mắt SweetCakeShop.vn phục vụ đặt bánh online 24/7.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   3. VÌ SAO CHỌN SWEETCAKE
+══════════════════════════════════════════════════════ *@
+<section class="py-5" style="background:#fff;">
+    <div class="container py-4 text-center">
+        <h2 class="section-title">Vì sao chọn SweetCake?</h2>
+        <p class="section-subtitle mb-5">Cam kết chất lượng, hương vị và dịch vụ tốt nhất</p>
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="why-card h-100">
+                    <div class="why-icon">🌿</div>
+                    <h5>Nguyên liệu tươi 100%</h5>
+                    <p class="text-muted small mb-0">Nguồn nguyên liệu chọn lọc từ nông trại sạch, không phẩm màu, không chất bảo quản.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="why-card h-100">
+                    <div class="why-icon">👨‍🍳</div>
+                    <h5>Nghệ nhân bánh chuyên nghiệp</h5>
+                    <p class="text-muted small mb-0">Đội ngũ đầu bếp có kinh nghiệm 5–15 năm, được đào tạo tại Pháp và Nhật Bản.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="why-card h-100">
+                    <div class="why-icon">🚀</div>
+                    <h5>Giao hàng nhanh & an toàn</h5>
+                    <p class="text-muted small mb-0">Hộp vận chuyển cách nhiệt, đảm bảo bánh đến tay bạn nguyên vẹn và tươi ngon.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="why-card h-100">
+                    <div class="why-icon">💝</div>
+                    <h5>Cam kết hoàn tiền</h5>
+                    <p class="text-muted small mb-0">Không hài lòng? Hoàn tiền 100% hoặc làm lại bánh miễn phí — không hỏi lý do.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   4. SẢN PHẨM NỔI BẬT (từ DB)
+══════════════════════════════════════════════════════ *@
+<section class="py-5" style="background:var(--cream);">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Sản phẩm nổi bật</h2>
+            <p class="section-subtitle">Những chiếc bánh được yêu thích nhất</p>
+        </div>
+        <div class="row g-4">
+            @foreach (var item in Model.FeaturedProducts)
+            {
+                <div class="col-xl-3 col-lg-4 col-md-6">
+                    <div class="product-card card h-100">
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId">
+                            <img src="@item.Image" alt="@item.ProductName"
+                                 onerror="this.src='/images/sp1.jpg'" />
+                        </a>
+                        <div class="card-body d-flex flex-column">
+                            @if (item.Category != null)
+                            {
+                                <span class="badge-cat mb-2 d-inline-block">@item.Category.CategoryName</span>
+                            }
+                            <h6 class="fw-bold mb-1" style="color:var(--text-dark);">@item.ProductName</h6>
+                            <p class="text-muted small flex-grow-1 mb-2">@item.Description</p>
+                            <div class="d-flex align-items-center justify-content-between mt-auto">
+                                <span class="fw-bold" style="color:var(--pink-dark);font-size:1.05rem;">
+                                    @item.Price.ToString("N0") ₫
+                                </span>
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
+                                   class="btn btn-sm rounded-pill"
+                                   style="background:var(--pink-main);color:#fff;border:none;font-size:.8rem;">
+                                    Xem chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="text-center mt-5">
+            <a asp-controller="Products" asp-action="IndexPro"
+               class="btn btn-lg rounded-pill px-5"
+               style="background:var(--pink-dark);color:#fff;border:none;">
+                Xem tất cả sản phẩm →
+            </a>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   5. TIN TỨC
+══════════════════════════════════════════════════════ *@
+<section class="py-5" style="background:#fff;">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Tin tức & Bài viết</h2>
+            <p class="section-subtitle">Cập nhật những điều mới nhất từ SweetCake</p>
+        </div>
+        @if (Model.LatestNews.Any())
+        {
+            <div class="row g-4">
+                @foreach (var news in Model.LatestNews)
+                {
+                    <div class="col-md-4">
+                        <div class="news-card card h-100">
+                            @if (!string.IsNullOrWhiteSpace(news.ImageUrl))
+                            {
+                                <img src="@news.ImageUrl" alt="@news.Title" onerror="this.src='/images/sp2.jpg'" />
+                            }
+                            else
+                            {
+                                <img src="/images/sp2.jpg" alt="@news.Title" />
+                            }
+                            <div class="card-body p-3">
+                                <span class="news-date">📅 @news.PublishedAt.ToString("dd/MM/yyyy")</span>
+                                @if (!string.IsNullOrWhiteSpace(news.Author))
+                                {
+                                    <span class="text-muted small ms-2">· @news.Author</span>
+                                }
+                                <h6 class="fw-bold mt-2 mb-1" style="color:var(--text-dark);">@news.Title</h6>
+                                <p class="text-muted small mb-0">@news.Summary</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <p class="text-muted">🍰 Chưa có bài viết nào. Quay lại sau nhé!</p>
+            </div>
+        }
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   6. KHUYẾN MÃI
+══════════════════════════════════════════════════════ *@
+<section class="py-5" style="background:var(--pink-soft);">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Khuyến mãi hấp dẫn 🎁</h2>
+            <p class="section-subtitle">Đừng bỏ lỡ những ưu đãi tuyệt vời từ SweetCake</p>
+        </div>
+        @if (Model.ActivePromotions.Any())
+        {
+            <div class="row g-4 justify-content-center">
+                @foreach (var promo in Model.ActivePromotions)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="promo-card h-100">
+                            @if (!string.IsNullOrWhiteSpace(promo.BadgeText))
+                            {
+                                <span class="promo-badge">@promo.BadgeText</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(promo.ImageUrl))
+                            {
+                                <img class="promo-img" src="@promo.ImageUrl" alt="@promo.Title"
+                                     onerror="this.src='/images/sp11.jpg'" />
+                            }
+                            else
+                            {
+                                <img class="promo-img" src="/images/sp11.jpg" alt="@promo.Title" />
+                            }
+                            <div class="p-4">
+                                @if (promo.DiscountPercent.HasValue)
+                                {
+                                    <div class="promo-discount">-@promo.DiscountPercent%</div>
+                                }
+                                <h5 class="fw-bold mt-2 mb-1" style="color:var(--text-dark);">@promo.Title</h5>
+                                <p class="text-muted small mb-2">@promo.Description</p>
+                                <p class="promo-countdown mb-3">
+                                    ⏰ Hết hạn: @promo.EndDate.ToString("dd/MM/yyyy")
+                                </p>
+                                <a asp-controller="Products" asp-action="IndexPro"
+                                   class="btn rounded-pill w-100 fw-bold"
+                                   style="background:var(--pink-dark);color:#fff;border:none;">
+                                    Mua ngay →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <p class="text-muted">Hiện chưa có khuyến mãi nào đang diễn ra. Quay lại sớm nhé! 🍰</p>
+            </div>
+        }
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   7. FEEDBACK KHÁCH HÀNG (Testimonials – static premium)
+══════════════════════════════════════════════════════ *@
+<section class="testimonials-section py-5">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Khách hàng nói gì về chúng tôi?</h2>
+            <p class="section-subtitle">Hơn 50.000 khách hàng hài lòng trên toàn quốc</p>
+        </div>
+        <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <!-- Slide 1 -->
+                <div class="carousel-item active">
+                    <div class="row g-4 justify-content-center">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="testi-card">
+                                <p class="text-muted mb-4 pt-3" style="font-size:1rem;line-height:1.7;">
+                                    "Bánh sinh nhật của SweetCake vừa đẹp vừa ngon! Mình đặt bánh cho con gái
+                                    và cả nhà đều trầm trồ. Sẽ quay lại!"
+                                </p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="/images/sp3.jpg" alt="Nguyễn Lan Anh" class="testi-avatar" />
+                                    <div>
+                                        <strong style="color:var(--text-dark);">Nguyễn Lan Anh</strong>
+                                        <p class="mb-0 text-muted small">TP. Hồ Chí Minh</p>
+                                        <div class="star-rating">★★★★★</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="testi-card">
+                                <p class="text-muted mb-4 pt-3" style="font-size:1rem;line-height:1.7;">
+                                    "Tiramisu matcha là best seller không phải ngẫu nhiên! Đậm đà, mịn màng,
+                                    không quá ngọt. Mình đặt mỗi tuần rồi."
+                                </p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="/images/sp14.jpg" alt="Trần Minh Khoa" class="testi-avatar" />
+                                    <div>
+                                        <strong style="color:var(--text-dark);">Trần Minh Khoa</strong>
+                                        <p class="mb-0 text-muted small">Hà Nội</p>
+                                        <div class="star-rating">★★★★★</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 d-none d-lg-block">
+                            <div class="testi-card">
+                                <p class="text-muted mb-4 pt-3" style="font-size:1rem;line-height:1.7;">
+                                    "Giao hàng đúng giờ, đóng gói cẩn thận, bánh không bị xộc xệch tí nào.
+                                    Kem vẫn tươi dù đi xa 60km. Ấn tượng lắm!"
+                                </p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="/images/sp5.jpg" alt="Phạm Thu Hà" class="testi-avatar" />
+                                    <div>
+                                        <strong style="color:var(--text-dark);">Phạm Thu Hà</strong>
+                                        <p class="mb-0 text-muted small">Đà Nẵng</p>
+                                        <div class="star-rating">★★★★★</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Slide 2 -->
+                <div class="carousel-item">
+                    <div class="row g-4 justify-content-center">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="testi-card">
+                                <p class="text-muted mb-4 pt-3" style="font-size:1rem;line-height:1.7;">
+                                    "Bánh mousse dâu tây nhà mình đặt cho đám cưới. Khách mời khen tới tận bây giờ.
+                                    Rất xứng đáng từng đồng!"
+                                </p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="/images/sp12.jpg" alt="Lê Quỳnh Mai" class="testi-avatar" />
+                                    <div>
+                                        <strong style="color:var(--text-dark);">Lê Quỳnh Mai</strong>
+                                        <p class="mb-0 text-muted small">Cần Thơ</p>
+                                        <div class="star-rating">★★★★★</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="testi-card">
+                                <p class="text-muted mb-4 pt-3" style="font-size:1rem;line-height:1.7;">
+                                    "Đặt bánh online cực kỳ dễ, thanh toán nhanh, nhân viên hỗ trợ nhiệt tình.
+                                    Sẽ recommend cho bạn bè!"
+                                </p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="/images/sp7.jpg" alt="Vũ Đức Anh" class="testi-avatar" />
+                                    <div>
+                                        <strong style="color:var(--text-dark);">Vũ Đức Anh</strong>
+                                        <p class="mb-0 text-muted small">Hải Phòng</p>
+                                        <div class="star-rating">★★★★★</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center gap-2 mt-4">
+                <button class="btn btn-sm rounded-circle" style="background:var(--pink-main);width:12px;height:12px;padding:0;"
+                        data-bs-target="#testimonialCarousel" data-bs-slide="prev"></button>
+                <button class="btn btn-sm rounded-circle" style="background:var(--pink-soft);border:2px solid var(--pink-main);width:12px;height:12px;padding:0;"
+                        data-bs-target="#testimonialCarousel" data-bs-slide="next"></button>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   8. GALLERY
+══════════════════════════════════════════════════════ *@
+<section class="py-5" style="background:#fff;">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Gallery 📸</h2>
+            <p class="section-subtitle">Những khoảnh khắc ngọt ngào từ SweetCake</p>
+        </div>
+        <div class="row g-3">
+            <!-- Cột 1 -->
+            <div class="col-lg-4 col-md-6 d-flex flex-column gap-3">
+                <div class="gallery-img" style="height:260px;"><img src="/images/sp1.jpg" alt="Bánh kem socola"></div>
+                <div class="gallery-img" style="height:180px;"><img src="/images/sp4.jpg" alt="Bánh bông lan trứng muối"></div>
+            </div>
+            <!-- Cột 2 -->
+            <div class="col-lg-4 col-md-6 d-flex flex-column gap-3">
+                <div class="gallery-img" style="height:180px;"><img src="/images/sp13.jpg" alt="Tiramisu truyền thống"></div>
+                <div class="gallery-img" style="height:260px;"><img src="/images/sp2.jpg" alt="Bánh kem dâu tây"></div>
+            </div>
+            <!-- Cột 3 -->
+            <div class="col-lg-4 d-none d-lg-flex flex-column gap-3">
+                <div class="gallery-img" style="height:220px;"><img src="/images/sp11.jpg" alt="Mousse socola"></div>
+                <div class="gallery-img" style="height:220px;"><img src="/images/sp15.jpg" alt="Bánh kem việt quất"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   9. FAQ
+══════════════════════════════════════════════════════ *@
+<section class="faq-section py-5">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Câu hỏi thường gặp (FAQ)</h2>
+            <p class="section-subtitle">Chúng tôi luôn sẵn sàng giải đáp mọi thắc mắc</p>
+        </div>
+        <div class="accordion mx-auto" id="faqAccordion" style="max-width:760px;">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                        🎂 SweetCake có nhận đặt bánh theo yêu cầu không?
+                    </button>
+                </h2>
+                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted">
+                        Có! Chúng tôi nhận đặt bánh theo yêu cầu với nhiều kích thước, hương vị và thiết kế tùy chỉnh.
+                        Vui lòng đặt trước ít nhất <strong>3 ngày</strong> để đảm bảo chất lượng tốt nhất.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                        🚚 Thời gian giao hàng là bao lâu?
+                    </button>
+                </h2>
+                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted">
+                        Nội thành TP.HCM: 2–4 giờ sau khi đặt. Các tỉnh thành khác: 1–2 ngày.
+                        Bánh được đóng gói trong hộp cách nhiệt chuyên dụng, đảm bảo nguyên vẹn khi đến tay bạn.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                        💳 SweetCake hỗ trợ những phương thức thanh toán nào?
+                    </button>
+                </h2>
+                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted">
+                        Chúng tôi hỗ trợ: Thanh toán khi nhận hàng (COD), thẻ tín dụng/ghi nợ,
+                        chuyển khoản ngân hàng và các ví điện tử (MoMo, ZaloPay, VNPay).
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                        🌿 Bánh có dành cho người ăn chay hoặc dị ứng không?
+                    </button>
+                </h2>
+                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted">
+                        Có! Chúng tôi có dòng bánh chay (không trứng, không sữa) và hỗ trợ tư vấn
+                        về dị ứng thực phẩm. Vui lòng ghi chú trong phần đặt hàng hoặc liên hệ trực tiếp.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                        🔄 Chính sách đổi trả như thế nào?
+                    </button>
+                </h2>
+                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted">
+                        Nếu bánh không đúng yêu cầu hoặc bị hỏng trong quá trình vận chuyển, chúng tôi sẽ
+                        <strong>hoàn tiền 100%</strong> hoặc làm lại miễn phí trong vòng 24 giờ kể từ khi nhận hàng.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ══════════════════════════════════════════════════════
+   10. NEWSLETTER
+══════════════════════════════════════════════════════ *@
+<section class="newsletter-section py-5">
+    <div class="container py-4 text-center">
+        <h2 class="fw-bold mb-2" style="font-size:2rem;">Đăng ký nhận ưu đãi 🎉</h2>
+        <p class="mb-4 opacity-90" style="font-size:1.05rem;">
+            Nhận ngay <strong>voucher 10%</strong> cho đơn đầu tiên cùng tin tức bánh mới nhất mỗi tuần!
+        </p>
+
+        @* Hiển thị thông báo kết quả *@
+        @if (TempData["NewsletterSuccess"] != null)
+        {
+            <div class="alert alert-success d-inline-flex align-items-center gap-2 rounded-pill px-4 mb-4" style="background:rgba(255,255,255,.2);color:#fff;border:none;">
+                ✅ @TempData["NewsletterSuccess"]
+            </div>
+        }
+        @if (TempData["NewsletterDuplicate"] != null)
+        {
+            <div class="alert d-inline-flex align-items-center gap-2 rounded-pill px-4 mb-4" style="background:rgba(255,255,255,.15);color:#fff;border:none;">
+                💌 @TempData["NewsletterDuplicate"]
+            </div>
+        }
+
+        <form asp-action="About" asp-controller="Home" method="post"
+              class="d-flex flex-wrap gap-3 justify-content-center align-items-start">
+            @Html.AntiForgeryToken()
+            <div class="d-flex flex-column align-items-start">
+                <input asp-for="NewsletterForm.Email"
+                       class="newsletter-input"
+                       placeholder="Nhập email của bạn..." />
+                <span asp-validation-for="NewsletterForm.Email"
+                      class="text-warning small mt-1 ms-3"></span>
+            </div>
+            <button type="submit" class="btn-newsletter btn" id="btn-newsletter-subscribe">
+                Đăng ký ngay →
+            </button>
+        </form>
+
+        <p class="mt-3 opacity-60 small">🔒 Chúng tôi không bao giờ chia sẻ email của bạn. Hủy đăng ký bất cứ lúc nào.</p>
+    </div>
+</section>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

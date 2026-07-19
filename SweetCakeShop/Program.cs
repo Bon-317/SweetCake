@@ -77,6 +77,7 @@ namespace SweetCakeShop
             builder.Services.AddScoped<IReviewService, SweetCakeShop.Services.ReviewService>();
             builder.Services.AddScoped<ICouponService, SweetCakeShop.Services.CouponService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IMarketingService, MarketingService>();    // Marketing module
             builder.Services.AddScoped<IChatPageContextService, ChatPageContextService>();
             builder.Services.AddScoped<IChatSessionService, ChatSessionService>();
             builder.Services.AddScoped<ICustomerDataService, CustomerDataService>();

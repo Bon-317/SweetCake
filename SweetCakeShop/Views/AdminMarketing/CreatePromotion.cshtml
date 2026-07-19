@@ -1,0 +1,81 @@
+@model SweetCakeShop.Models.Promotion
+@{
+    var isEdit = Model.PromotionId != 0;
+    ViewData["Title"] = isEdit ? "Sửa khuyến mãi" : "Tạo khuyến mãi mới";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <a asp-action="Promotions" class="text-muted text-decoration-none">← Quay lại danh sách</a>
+    <h4 class="fw-bold mt-2">@ViewData["Title"]</h4>
+</div>
+
+<div class="card border-0 shadow-sm p-4" style="max-width:720px;">
+    <form asp-action="@(isEdit ? "EditPromotion" : "CreatePromotion")" method="post">
+        @Html.AntiForgeryToken()
+        @if (isEdit)
+        {
+            <input type="hidden" asp-for="PromotionId" />
+        }
+
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label fw-semibold">Tiêu đề <span class="text-danger">*</span></label>
+            <input asp-for="Title" class="form-control" placeholder="Ví dụ: Giảm 20% toàn bộ bánh kem..." />
+            <span asp-validation-for="Title" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label fw-semibold">Mô tả chi tiết</label>
+            <textarea asp-for="Description" class="form-control" rows="3"
+                      placeholder="Điều kiện áp dụng, ngoại lệ..."></textarea>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label asp-for="DiscountPercent" class="form-label fw-semibold">Giảm giá (%)</label>
+                <input asp-for="DiscountPercent" type="number" min="0" max="100" class="form-control"
+                       placeholder="0–100" />
+                <small class="text-muted">Để trống nếu không theo %.</small>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="BadgeText" class="form-label fw-semibold">Nhãn badge</label>
+                <input asp-for="BadgeText" class="form-control" placeholder="HOT / MỚI / FLASH SALE" maxlength="30" />
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsActive" class="form-check-label fw-semibold">Đang kích hoạt</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label asp-for="StartDate" class="form-label fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
+                <input asp-for="StartDate" type="datetime-local" class="form-control"
+                       value="@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="EndDate" class="form-label fw-semibold">Ngày kết thúc <span class="text-danger">*</span></label>
+                <input asp-for="EndDate" type="datetime-local" class="form-control"
+                       value="@Model.EndDate.ToString("yyyy-MM-ddTHH:mm")" />
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="ImageUrl" class="form-label fw-semibold">URL ảnh minh họa</label>
+            <input asp-for="ImageUrl" class="form-control" placeholder="https://... hoặc /images/..." />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-pink rounded-pill px-4">
+                @(isEdit ? "💾 Lưu thay đổi" : "✅ Tạo khuyến mãi")
+            </button>
+            <a asp-action="Promotions" class="btn btn-outline-secondary rounded-pill px-4">Hủy</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

@@ -27,6 +27,11 @@ namespace SweetCakeShop.Data
         public DbSet<CouponUsage> CouponUsages { get; set; }
         public DbSet<Notification> Notifications { get; set; }
 
+        // ── Marketing module ──
+        public DbSet<News> News { get; set; }
+        public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -197,6 +202,42 @@ namespace SweetCakeShop.Data
                     .WithMany()
                     .HasForeignKey(o => o.CouponId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── News ──
+            builder.Entity<News>(entity =>
+            {
+                entity.ToTable("News");
+                entity.HasKey(n => n.NewsId);
+                entity.Property(n => n.Title).HasMaxLength(300).IsRequired();
+                entity.Property(n => n.Summary).HasMaxLength(500);
+                entity.Property(n => n.ImageUrl).HasMaxLength(500);
+                entity.Property(n => n.Author).HasMaxLength(100);
+                entity.HasIndex(n => n.PublishedAt);
+                entity.HasIndex(n => n.IsPublished);
+            });
+
+            // ── Promotion ──
+            builder.Entity<Promotion>(entity =>
+            {
+                entity.ToTable("Promotions");
+                entity.HasKey(p => p.PromotionId);
+                entity.Property(p => p.Title).HasMaxLength(200).IsRequired();
+                entity.Property(p => p.Description).HasMaxLength(1000);
+                entity.Property(p => p.ImageUrl).HasMaxLength(500);
+                entity.Property(p => p.BadgeText).HasMaxLength(30);
+                entity.HasIndex(p => p.IsActive);
+                entity.HasIndex(p => p.EndDate);
+            });
+
+            // ── NewsletterSubscriber ──
+            builder.Entity<NewsletterSubscriber>(entity =>
+            {
+                entity.ToTable("NewsletterSubscribers");
+                entity.HasKey(s => s.SubscriberId);
+                entity.Property(s => s.Email).HasMaxLength(256).IsRequired();
+                entity.HasIndex(s => s.Email).IsUnique();
+                entity.HasIndex(s => s.IsActive);
             });
         }
     }

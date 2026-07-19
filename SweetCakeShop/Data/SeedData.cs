@@ -283,6 +283,88 @@ namespace SweetCakeShop.Data
                 context.SaveChanges();
             }
 
+            // ── Marketing Module Seed ──────────────────────────────────────
+            if (!context.News.Any())
+            {
+                var news = new[]
+                {
+                    new News
+                    {
+                        Title       = "SweetCake ra mắt dòng bánh mùa hè 2026",
+                        Summary     = "Những chiếc bánh mousse trái cây mát lạnh, hoàn hảo cho mùa hè nóng bức.",
+                        Content     = "Mùa hè 2026, SweetCake tự hào giới thiệu bộ sưu tập bánh mới với các hương vị trái cây tươi mát như xoài, dâu tây, chanh leo. Tất cả đều được làm từ nguyên liệu tươi 100%, không chất bảo quản.",
+                        ImageUrl    = "/images/sp19.jpg",
+                        Author      = "Đội ngũ SweetCake",
+                        PublishedAt = DateTime.Now.AddDays(-5),
+                        IsPublished = true
+                    },
+                    new News
+                    {
+                        Title       = "Bí quyết bảo quản bánh kem đúng cách",
+                        Summary     = "Hướng dẫn bảo quản bánh kem giữ được hương vị tươi ngon lâu nhất.",
+                        Content     = "Bánh kem cần được bảo quản trong ngăn mát tủ lạnh ở nhiệt độ 2–5°C. Trước khi thưởng thức, hãy để bánh ra ngoài khoảng 15–20 phút để kem đạt độ mềm mịn tối ưu.",
+                        ImageUrl    = "/images/sp1.jpg",
+                        Author      = "Chef Minh Tuấn",
+                        PublishedAt = DateTime.Now.AddDays(-12),
+                        IsPublished = true
+                    },
+                    new News
+                    {
+                        Title       = "SweetCake đạt Top 10 thương hiệu bánh ngọt Việt Nam 2025",
+                        Summary     = "Niềm vinh dự lớn khi SweetCake được bình chọn vào Top 10 thương hiệu uy tín.",
+                        Content     = "Chúng tôi xin chân thành cảm ơn hàng chục nghìn khách hàng đã tin tưởng và ủng hộ SweetCake trong suốt những năm qua. Giải thưởng này là động lực để chúng tôi không ngừng cải tiến chất lượng.",
+                        ImageUrl    = "/images/sp13.jpg",
+                        Author      = "Ban Giám đốc SweetCake",
+                        PublishedAt = DateTime.Now.AddDays(-30),
+                        IsPublished = true
+                    }
+                };
+                context.News.AddRange(news);
+                context.SaveChanges();
+            }
+
+            if (!context.Promotions.Any())
+            {
+                var promos = new[]
+                {
+                    new Promotion
+                    {
+                        Title           = "Flash Sale Cuối Tuần – Giảm 20% Bánh Kem",
+                        Description     = "Áp dụng cho tất cả sản phẩm danh mục Bánh kem. Đơn tối thiểu 300.000đ.",
+                        DiscountPercent = 20,
+                        BadgeText       = "HOT",
+                        StartDate       = DateTime.Now.AddDays(-1),
+                        EndDate         = DateTime.Now.AddDays(6),
+                        ImageUrl        = "/images/sp2.jpg",
+                        IsActive        = true
+                    },
+                    new Promotion
+                    {
+                        Title           = "Mua 2 Tặng 1 – Bánh Quy & Bông Lan",
+                        Description     = "Mua 2 hộp bánh quy hoặc bông lan bất kỳ, tặng 1 hộp cùng loại. Áp dụng tại cửa hàng và online.",
+                        DiscountPercent = null,
+                        BadgeText       = "MUA 2 TẶNG 1",
+                        StartDate       = DateTime.Now,
+                        EndDate         = DateTime.Now.AddDays(14),
+                        ImageUrl        = "/images/sp7.jpg",
+                        IsActive        = true
+                    },
+                    new Promotion
+                    {
+                        Title           = "Ưu đãi thành viên mới – Giảm 15% đơn đầu tiên",
+                        Description     = "Đăng ký tài khoản mới và nhận ngay voucher giảm 15% cho đơn hàng đầu tiên, không giới hạn danh mục.",
+                        DiscountPercent = 15,
+                        BadgeText       = "THÀNH VIÊN MỚI",
+                        StartDate       = DateTime.Now.AddDays(-30),
+                        EndDate         = DateTime.Now.AddDays(60),
+                        ImageUrl        = "/images/sp15.jpg",
+                        IsActive        = true
+                    }
+                };
+                context.Promotions.AddRange(promos);
+                context.SaveChanges();
+            }
+
             Console.WriteLine("Seed dữ liệu hoàn tất!");
         }
     }

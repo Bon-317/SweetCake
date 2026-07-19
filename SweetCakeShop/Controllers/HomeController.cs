@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SweetCakeShop.Data;
 using SweetCakeShop.Models;
 using SweetCakeShop.Models.ViewModels;
+using SweetCakeShop.Services;
 using System.Diagnostics;
 
 namespace SweetCakeShop.Controllers
@@ -10,10 +11,12 @@ namespace SweetCakeShop.Controllers
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMarketingService _marketingService;
 
-        public HomeController(ApplicationDbContext context)
+        public HomeController(ApplicationDbContext context, IMarketingService marketingService)
         {
             _context = context;
+            _marketingService = marketingService;
         }
 
         public async Task<IActionResult> Index()
@@ -29,6 +32,42 @@ namespace SweetCakeShop.Controllers
             };
 
             return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> About()
+        {
+            var vm = new AboutViewModel
+            {
+                FeaturedProducts = await _marketingService.GetFeaturedProductsAsync(8),
+                LatestNews       = await _marketingService.GetLatestNewsAsync(3),
+                ActivePromotions = await _marketingService.GetActivePromotionsAsync(),
+                NewsletterForm   = new NewsletterSubscribeViewModel()
+            };
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> About(AboutViewModel model)
+        {
+            // Chỉ validate phần NewsletterForm
+            if (!ModelState.IsValid)
+            {
+                // Nạp lại dữ liệu các section khác
+                model.FeaturedProducts = await _marketingService.GetFeaturedProductsAsync(8);
+                model.LatestNews       = await _marketingService.GetLatestNewsAsync(3);
+                model.ActivePromotions = await _marketingService.GetActivePromotionsAsync();
+                return View(model);
+            }
+
+            var success = await _marketingService.SubscribeNewsletterAsync(model.NewsletterForm.Email);
+            if (success)
+                TempData["NewsletterSuccess"] = "Đăng ký thành công! Cảm ơn bạn đã đăng ký nhận tin từ SweetCake 🍰";
+            else
+                TempData["NewsletterDuplicate"] = "Email này đã đăng ký trước đó rồi. Cảm ơn bạn!";
+
+            return RedirectToAction(nameof(About));
         }
 
         public IActionResult Privacy()

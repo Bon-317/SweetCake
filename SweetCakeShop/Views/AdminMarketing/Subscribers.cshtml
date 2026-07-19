@@ -1,0 +1,85 @@
+@model IEnumerable<SweetCakeShop.Models.NewsletterSubscriber>
+@{
+    ViewData["Title"] = "Quản lý Newsletter";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    int active   = Model.Count(s => s.IsActive);
+    int inactive = Model.Count(s => !s.IsActive);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">📧 Newsletter Subscribers</h4>
+    <div class="d-flex gap-2">
+        <span class="badge bg-success rounded-pill fs-6 px-3">@active đang hoạt động</span>
+        <span class="badge bg-secondary rounded-pill fs-6 px-3">@inactive tạm dừng</span>
+        <span class="badge bg-dark rounded-pill fs-6 px-3">@Model.Count() tổng</span>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Email</th>
+                    <th>Ngày đăng ký</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sub in Model)
+                {
+                    <tr>
+                        <td>@sub.SubscriberId</td>
+                        <td>
+                            <a href="mailto:@sub.Email" class="text-decoration-none">@sub.Email</a>
+                        </td>
+                        <td>@sub.SubscribedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            @if (sub.IsActive)
+                            {
+                                <span class="badge bg-success rounded-pill">Đang hoạt động</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary rounded-pill">Đã tạm dừng</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <form asp-action="ToggleSubscriber" asp-route-id="@sub.SubscriberId"
+                                  method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-warning me-1"
+                                        title="@(sub.IsActive ? "Tạm dừng" : "Kích hoạt lại")">
+                                    @(sub.IsActive ? "⏸" : "▶")
+                                </button>
+                            </form>
+                            <form asp-action="DeleteSubscriber" asp-route-id="@sub.SubscriberId"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('Xóa subscriber này?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Chưa có ai đăng ký nhận tin.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -29,8 +29,16 @@
                        asp-controller="Admin" asp-action="Coupons">Mã giảm giá</a>
                     <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "TopSellingProducts" ? "active" : "")"
                        asp-controller="Admin" asp-action="TopSellingProducts">Bán chạy</a>
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "LiveChat" ? "active" : "")"
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminMarketing" && ViewContext.RouteData.Values["action"]?.ToString() == "LiveChat" ? "active" : "")"
                        asp-controller="Admin" asp-action="LiveChat">💬 Hỗ trợ Khách hàng (Live)</a>
+                    <hr class="border-secondary opacity-25" />
+                    <small class="text-white-50 px-3 text-uppercase" style="font-size:.72rem;letter-spacing:1px;">Marketing</small>
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminMarketing" && ViewContext.RouteData.Values["action"]?.ToString()?.StartsWith("News") == true ? "active" : "")"
+                       asp-controller="AdminMarketing" asp-action="News">📰 Tin tức</a>
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminMarketing" && ViewContext.RouteData.Values["action"]?.ToString()?.StartsWith("Promot") == true ? "active" : "")"
+                       asp-controller="AdminMarketing" asp-action="Promotions">🎁 Khuyến mãi</a>
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminMarketing" && ViewContext.RouteData.Values["action"]?.ToString() == "Subscribers" ? "active" : "")"
+                       asp-controller="AdminMarketing" asp-action="Subscribers">📧 Newsletter</a>
                     <hr class="border-secondary opacity-25" />
                     <a class="nav-link" asp-controller="Home" asp-action="Index">Về trang chủ</a>
                 </nav>

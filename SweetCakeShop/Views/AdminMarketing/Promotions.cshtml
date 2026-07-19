@@ -1,0 +1,89 @@
+@model IEnumerable<SweetCakeShop.Models.Promotion>
+@{
+    ViewData["Title"] = "Quản lý Khuyến mãi";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">🎁 Khuyến mãi &amp; Ưu đãi</h4>
+    <a asp-action="CreatePromotion" class="btn btn-pink rounded-pill px-4">
+        + Tạo khuyến mãi mới
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Tiêu đề</th>
+                    <th>Giảm giá</th>
+                    <th>Từ ngày</th>
+                    <th>Đến ngày</th>
+                    <th>Nhãn</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var promo in Model)
+                {
+                    var isExpired = promo.EndDate < DateTime.Now;
+                    <tr>
+                        <td>@promo.PromotionId</td>
+                        <td><strong>@promo.Title</strong></td>
+                        <td>
+                            @if (promo.DiscountPercent.HasValue)
+                            {
+                                <span class="badge rounded-pill" style="background:#fce4ec;color:#c2185b;">-@promo.DiscountPercent%</span>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td>@promo.StartDate.ToString("dd/MM/yyyy")</td>
+                        <td>@promo.EndDate.ToString("dd/MM/yyyy")</td>
+                        <td>@(promo.BadgeText ?? "—")</td>
+                        <td>
+                            @if (!promo.IsActive)
+                            {
+                                <span class="badge bg-secondary rounded-pill">Tắt</span>
+                            }
+                            else if (isExpired)
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill">Đã hết hạn</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success rounded-pill">Đang chạy</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="EditPromotion" asp-route-id="@promo.PromotionId"
+                               class="btn btn-sm btn-outline-secondary me-1">Sửa</a>
+                            <form asp-action="DeletePromotion" asp-route-id="@promo.PromotionId"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('Xóa khuyến mãi này?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Chưa có khuyến mãi nào.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
