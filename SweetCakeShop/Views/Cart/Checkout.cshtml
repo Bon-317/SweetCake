@@ -186,7 +186,9 @@
             const feeDisplay = document.getElementById('shipping-fee-display');
             const totalDisplay = document.getElementById('total-amount-display');
 
-            // 1. Tải danh sách Tỉnh/Thành phố từ API provinces.open-api.vn
+            // 1. Tải danh sách Tỉnh/Thành phố từ API nội bộ (chuẩn GHN)
+            /*
+            // ĐOẠN CODE CŨ (SỬ DỤNG PROVINCES.OPEN-API.VN):
             try {
                 const resp = await fetch('https://provinces.open-api.vn/api/p/');
                 if (resp.ok) {
@@ -205,8 +207,28 @@
                 console.error('Lỗi tải provinces:', err);
                 showToast('Lỗi kết nối tải tỉnh thành', 'warning');
             }
+            */
+            // ĐOẠN CODE MỚI (SỬ DỤNG API NỘI BỘ GHN):
+            try {
+                const resp = await fetch('/api/shipping/provinces');
+                if (resp.ok) {
+                    const provinces = await resp.json();
+                    provinces.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.name || p.Name;
+                        opt.textContent = p.name || p.Name;
+                        opt.setAttribute('data-code', p.id || p.Id);
+                        provSelect.appendChild(opt);
+                    });
+                } else {
+                    showToast('Không tải được danh sách tỉnh thành GHN', 'warning');
+                }
+            } catch (err) {
+                console.error('Lỗi tải provinces GHN:', err);
+                showToast('Lỗi kết nối tải tỉnh thành GHN', 'warning');
+            }
 
-            // 2. Khi thay đổi Tỉnh/Thành phố -> Tải Quận/Huyện
+            // 2. Khi thay đổi Tỉnh/Thành phố -> Tải Quận/Huyện từ API nội bộ (chuẩn GHN)
             provSelect.addEventListener('change', async function () {
                 distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
                 wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
@@ -223,6 +245,8 @@
                     try {
                         distSelect.disabled = false;
                         distSelect.innerHTML = '<option value="">Đang tải Quận/Huyện...</option>';
+                        /*
+                        // ĐOẠN CODE CŨ:
                         const resp = await fetch(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
                         if (resp.ok) {
                             const data = await resp.json();
@@ -236,14 +260,28 @@
                                 distSelect.appendChild(opt);
                             });
                         }
+                        */
+                        // ĐOẠN CODE MỚI:
+                        const resp = await fetch(`/api/shipping/districts?provinceId=${provinceCode}`);
+                        if (resp.ok) {
+                            const districts = await resp.json();
+                            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                            districts.forEach(d => {
+                                const opt = document.createElement('option');
+                                opt.value = d.name || d.Name;
+                                opt.textContent = d.name || d.Name;
+                                opt.setAttribute('data-code', d.id || d.Id);
+                                distSelect.appendChild(opt);
+                            });
+                        }
                     } catch (err) {
-                        console.error('Lỗi tải districts:', err);
+                        console.error('Lỗi tải districts GHN:', err);
                         distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
                     }
                 }
             });
 
-            // 3. Khi thay đổi Quận/Huyện -> Tải Phường/Xã
+            // 3. Khi thay đổi Quận/Huyện -> Tải Phường/Xã từ API nội bộ (chuẩn GHN)
             distSelect.addEventListener('change', async function () {
                 wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
                 wardSelect.disabled = true;
@@ -258,6 +296,8 @@
                     try {
                         wardSelect.disabled = false;
                         wardSelect.innerHTML = '<option value="">Đang tải Phường/Xã...</option>';
+                        /*
+                        // ĐOẠN CODE CŨ:
                         const resp = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
                         if (resp.ok) {
                             const data = await resp.json();
@@ -271,8 +311,22 @@
                                 wardSelect.appendChild(opt);
                             });
                         }
+                        */
+                        // ĐOẠN CODE MỚI:
+                        const resp = await fetch(`/api/shipping/wards?districtId=${districtCode}`);
+                        if (resp.ok) {
+                            const wards = await resp.json();
+                            wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                            wards.forEach(w => {
+                                const opt = document.createElement('option');
+                                opt.value = w.name || w.Name;
+                                opt.textContent = w.name || w.Name;
+                                opt.setAttribute('data-code', w.code || w.Code || w.id || w.Id);
+                                wardSelect.appendChild(opt);
+                            });
+                        }
                     } catch (err) {
-                        console.error('Lỗi tải wards:', err);
+                        console.error('Lỗi tải wards GHN:', err);
                         wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
                     }
                 }

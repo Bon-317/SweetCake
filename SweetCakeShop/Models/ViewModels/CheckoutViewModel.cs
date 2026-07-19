@@ -12,6 +12,7 @@ namespace SweetCakeShop.Models.ViewModels
         public string CustomerEmail { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0")]
         public string CustomerPhone { get; set; } = string.Empty;
 
         public string ShippingAddress { get; set; } = string.Empty;

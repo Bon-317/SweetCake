@@ -1,22 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using SweetCakeShop.Data;
+using SweetCakeShop.Models;
 
 namespace SweetCakeShop.Services.Shipping
 {
     public class GhnShippingService : IGhnShippingService
     {
         private readonly HttpClient _httpClient;
+        private readonly IServiceProvider _serviceProvider;
         private const string Token = "7d0a6149-81a0-11f1-a973-aee5264794df";
         private const string ShopId = "201573"; // Shop ID liên kết với Token trên Sandbox
         private const string BaseUrl = "https://dev-online-gateway.ghn.vn/shiip/public-api";
 
-        public GhnShippingService(HttpClient httpClient)
+        public GhnShippingService(HttpClient httpClient, IServiceProvider serviceProvider)
         {
             _httpClient = httpClient;
+            _serviceProvider = serviceProvider;
             _httpClient.DefaultRequestHeaders.Add("Token", Token);
         }
 
@@ -31,18 +38,24 @@ namespace SweetCakeShop.Services.Shipping
                     var root = doc.RootElement;
                     if (root.TryGetProperty("code", out var code) && code.GetInt32() == 200)
                     {
-                        var data = root.GetProperty("data");
-                        var list = new List<GhnLocationDto>();
-                        foreach (var item in data.EnumerateArray())
+                        if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
                         {
-                            list.Add(new GhnLocationDto
+                            var list = new List<GhnLocationDto>();
+                            foreach (var item in data.EnumerateArray())
                             {
-                                Id = item.GetProperty("ProvinceID").GetInt32(),
-                                Name = item.GetProperty("ProvinceName").GetString() ?? "",
-                                Code = item.GetProperty("Code").GetString() ?? item.GetProperty("ProvinceID").GetInt32().ToString()
-                            });
+                                int id = item.TryGetProperty("ProvinceID", out var idProp) && idProp.ValueKind != JsonValueKind.Null ? idProp.GetInt32() : 0;
+                                string name = item.TryGetProperty("ProvinceName", out var nameProp) && nameProp.ValueKind != JsonValueKind.Null ? nameProp.GetString() ?? "" : "";
+                                string codeStr = item.TryGetProperty("Code", out var codeProp) && codeProp.ValueKind != JsonValueKind.Null ? codeProp.GetString() ?? id.ToString() : id.ToString();
+
+                                list.Add(new GhnLocationDto
+                                {
+                                    Id = id,
+                                    Name = name,
+                                    Code = codeStr
+                                });
+                            }
+                            return list;
                         }
-                        return list;
                     }
                 }
             }
@@ -64,18 +77,24 @@ namespace SweetCakeShop.Services.Shipping
                     var root = doc.RootElement;
                     if (root.TryGetProperty("code", out var code) && code.GetInt32() == 200)
                     {
-                        var data = root.GetProperty("data");
-                        var list = new List<GhnLocationDto>();
-                        foreach (var item in data.EnumerateArray())
+                        if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
                         {
-                            list.Add(new GhnLocationDto
+                            var list = new List<GhnLocationDto>();
+                            foreach (var item in data.EnumerateArray())
                             {
-                                Id = item.GetProperty("DistrictID").GetInt32(),
-                                Name = item.GetProperty("DistrictName").GetString() ?? "",
-                                Code = item.GetProperty("Code").GetString() ?? item.GetProperty("DistrictID").GetInt32().ToString()
-                            });
+                                int id = item.TryGetProperty("DistrictID", out var idProp) && idProp.ValueKind != JsonValueKind.Null ? idProp.GetInt32() : 0;
+                                string name = item.TryGetProperty("DistrictName", out var nameProp) && nameProp.ValueKind != JsonValueKind.Null ? nameProp.GetString() ?? "" : "";
+                                string codeStr = item.TryGetProperty("Code", out var codeProp) && codeProp.ValueKind != JsonValueKind.Null ? codeProp.GetString() ?? id.ToString() : id.ToString();
+
+                                list.Add(new GhnLocationDto
+                                {
+                                    Id = id,
+                                    Name = name,
+                                    Code = codeStr
+                                });
+                            }
+                            return list;
                         }
-                        return list;
                     }
                 }
             }
@@ -97,18 +116,23 @@ namespace SweetCakeShop.Services.Shipping
                     var root = doc.RootElement;
                     if (root.TryGetProperty("code", out var code) && code.GetInt32() == 200)
                     {
-                        var data = root.GetProperty("data");
-                        var list = new List<GhnLocationDto>();
-                        foreach (var item in data.EnumerateArray())
+                        if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
                         {
-                            list.Add(new GhnLocationDto
+                            var list = new List<GhnLocationDto>();
+                            foreach (var item in data.EnumerateArray())
                             {
-                                Id = 0,
-                                Code = item.GetProperty("WardCode").GetString() ?? "",
-                                Name = item.GetProperty("WardName").GetString() ?? ""
-                            });
+                                string wardCode = item.TryGetProperty("WardCode", out var codeProp) && codeProp.ValueKind != JsonValueKind.Null ? codeProp.GetString() ?? "" : "";
+                                string wardName = item.TryGetProperty("WardName", out var nameProp) && nameProp.ValueKind != JsonValueKind.Null ? nameProp.GetString() ?? "" : "";
+
+                                list.Add(new GhnLocationDto
+                                {
+                                    Id = 0,
+                                    Code = wardCode,
+                                    Name = wardName
+                                });
+                            }
+                            return list;
                         }
-                        return list;
                     }
                 }
             }
@@ -127,7 +151,7 @@ namespace SweetCakeShop.Services.Shipping
                 request.Headers.Add("ShopId", ShopId);
                 request.Content = JsonContent.Create(new
                 {
-                    from_district_id = 3695, // TP. Thủ Đức (hoặc Quận/Huyện của shop)
+                    from_district_id = 1459, // Hóc Môn
                     to_district_id = toDistrictId,
                     to_ward_code = toWardCode,
                     height = 15,
@@ -174,6 +198,159 @@ namespace SweetCakeShop.Services.Shipping
                 return 35000m; // Lân cận TP.HCM
 
             return 45000m; // Các tỉnh thành khác
+        }
+
+        public async Task<GhnCreateOrderResponseDto> CreateOrderAsync(GhnCreateOrderRequestDto request)
+        {
+            var result = new GhnCreateOrderResponseDto();
+            try
+            {
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/shipping-order/create");
+                httpRequest.Headers.Add("ShopId", ShopId);
+                httpRequest.Content = JsonContent.Create(request);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("code", out var codeProp) && codeProp.GetInt32() == 200)
+                {
+                    result.Success = true;
+                    if (root.TryGetProperty("message_display", out var msgDisp))
+                        result.Message = msgDisp.GetString() ?? "Tạo đơn hàng thành công";
+                    else if (root.TryGetProperty("message", out var msg))
+                        result.Message = msg.GetString() ?? "Success";
+
+                    if (root.TryGetProperty("data", out var data))
+                    {
+                        if (data.TryGetProperty("order_code", out var code))
+                            result.OrderCode = code.GetString() ?? "";
+                        if (data.TryGetProperty("total_fee", out var fee) && fee.ValueKind != JsonValueKind.Null)
+                            result.TotalFee = fee.GetDecimal();
+                        if (data.TryGetProperty("expected_delivery_time", out var time) && time.ValueKind != JsonValueKind.Null)
+                            result.ExpectedDeliveryTime = time.GetString() ?? "";
+                    }
+                }
+                else
+                {
+                    result.Success = false;
+                    if (root.TryGetProperty("message", out var msg))
+                        result.Message = msg.GetString() ?? "Lỗi tạo đơn hàng GHN";
+                    else if (root.TryGetProperty("code_message", out var codeMsg))
+                        result.Message = codeMsg.GetString() ?? "Error";
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = $"Exception: {ex.Message}";
+            }
+            return result;
+        }
+
+        public async Task<string> CreateAutomatedOrderAsync(int orderId)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var order = await context.Orders
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Product)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (order == null)
+                return "(GHN: Không tìm thấy đơn hàng trong CSDL)";
+
+            // Chống tạo trùng lặp: Nếu đơn hàng đã có GhnOrderCode trước đó -> Không tạo lại
+            if (!string.IsNullOrEmpty(order.GhnOrderCode))
+            {
+                return $"[ GHN: Đơn hàng đã được tạo trên GHN trước đó (Mã GHN: {order.GhnOrderCode}) ]";
+            }
+
+            int districtId = 0;
+            string wardCode = string.Empty;
+
+            var provinces = await GetProvincesAsync();
+            var prov = provinces.FirstOrDefault(p => order.Province.Contains(p.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Contains(order.Province, StringComparison.OrdinalIgnoreCase));
+            if (prov != null)
+            {
+                var districts = await GetDistrictsAsync(prov.Id);
+                var dist = districts.FirstOrDefault(d => order.District.Contains(d.Name, StringComparison.OrdinalIgnoreCase) || d.Name.Contains(order.District, StringComparison.OrdinalIgnoreCase));
+                if (dist != null)
+                {
+                    districtId = dist.Id;
+                    var wards = await GetWardsAsync(dist.Id);
+                    var w = wards.FirstOrDefault(wItem => order.Ward.Contains(wItem.Name, StringComparison.OrdinalIgnoreCase) || wItem.Name.Contains(order.Ward, StringComparison.OrdinalIgnoreCase));
+                    if (w != null) wardCode = w.Code;
+                }
+            }
+
+            if (districtId == 0 || string.IsNullOrEmpty(wardCode))
+            {
+                return "(GHN: Chưa tra được mã Quận/Phường từ địa chỉ đơn hàng. Vui lòng kiểm tra lại địa chỉ Tỉnh/Quận/Phường chuẩn.)";
+            }
+
+            var validPhone = !string.IsNullOrEmpty(order.CustomerPhone) && order.CustomerPhone.Trim().Length >= 9 && order.CustomerPhone.Trim().All(char.IsDigit)
+                ? order.CustomerPhone.Trim()
+                : "0909123456"; // Tự động điền SĐT hợp lệ nếu số trên đơn cũ ngắn/sai định dạng
+
+            var ghnRequest = new GhnCreateOrderRequestDto
+            {
+                payment_type_id = 1, // Shop trả phí ship
+                note = "Xin nhẹ tay, bánh kem dễ vỡ",
+                required_note = "CHOXEMHANGKHONGTHU",
+                client_order_code = order.OrderId.ToString(),
+                to_name = !string.IsNullOrWhiteSpace(order.CustomerName) ? order.CustomerName : "Khách hàng SweetCake",
+                to_phone = validPhone,
+                to_address = !string.IsNullOrEmpty(order.StreetAddress) ? $"{order.StreetAddress}, {order.Ward}, {order.District}, {order.Province}" : order.ShippingAddress,
+                to_district_id = districtId,
+                to_ward_code = wardCode,
+                cod_amount = (order.Status == "Pending" || order.Status == "Confirmed" || order.Status == "AwaitingConfirmation") ? (int)order.TotalPrice : 0,
+                content = $"Đơn hàng Sweet Cake Shop #{order.OrderId}",
+                weight = 500,
+                length = 20,
+                width = 20,
+                height = 15,
+                insurance_value = (int)Math.Min(order.TotalPrice, 5000000),
+                service_type_id = 2
+            };
+
+            foreach (var item in order.OrderDetails)
+            {
+                ghnRequest.items.Add(new GhnOrderItemDto
+                {
+                    name = item.Product?.ProductName ?? $"Bánh kem #{item.ProductId}",
+                    code = item.ProductId.ToString(),
+                    quantity = item.Quantity > 0 ? item.Quantity : 1,
+                    price = (int)item.Price,
+                    weight = 500
+                });
+            }
+
+            if (ghnRequest.items.Count == 0)
+            {
+                ghnRequest.items.Add(new GhnOrderItemDto
+                {
+                    name = "Bánh kem SweetCake",
+                    code = "SWEETCAKE",
+                    quantity = 1,
+                    price = (int)order.TotalPrice,
+                    weight = 500
+                });
+            }
+
+            var result = await CreateOrderAsync(ghnRequest);
+            if (result.Success)
+            {
+                // Lưu lại mã vận đơn GHN vào CSDL để lần sau không bị tạo trùng
+                order.GhnOrderCode = result.OrderCode;
+                await context.SaveChangesAsync();
+                return $"[ GHN: Tạo vận đơn thành công! Mã GHN: {result.OrderCode} - Phí: {result.TotalFee:N0}đ ]";
+            }
+            else
+            {
+                return $"[ GHN Lỗi: {result.Message} ]";
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ using SweetCakeShop.Constants;
 using SweetCakeShop.Data;
 using SweetCakeShop.Models;
 using SweetCakeShop.Services;
+using SweetCakeShop.Services.Shipping;
 using SweetCakeShop.Models.ViewModels;
 
 namespace SweetCakeShop.Controllers
@@ -16,13 +17,15 @@ namespace SweetCakeShop.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly ICouponService _couponService;
         private readonly IOrderInventoryService _orderInventoryService;
+        private readonly IGhnShippingService _ghnService;
 
-        public AdminController(ApplicationDbContext context, IWebHostEnvironment env, ICouponService couponService, IOrderInventoryService orderInventoryService)
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment env, ICouponService couponService, IOrderInventoryService orderInventoryService, IGhnShippingService ghnService)
         {
             _context = context;
             _env = env;
             _couponService = couponService;
             _orderInventoryService = orderInventoryService;
+            _ghnService = ghnService;
         }
 
         public IActionResult Dashboard() => RedirectToAction("Index", "AdminDashboard");
@@ -100,10 +103,15 @@ namespace SweetCakeShop.Controllers
             if (string.Equals(status, OrderStatuses.Confirmed, StringComparison.OrdinalIgnoreCase))
             {
                 var result = await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+                var ghnMsg = await _ghnService.CreateAutomatedOrderAsync(orderId);
                 if (result.Success)
-                    TempData["Success"] = result.Message;
+                {
+                    TempData["Success"] = $"{result.Message} {ghnMsg}";
+                }
                 else
-                    TempData["Warning"] = result.Message;
+                {
+                    TempData["Warning"] = $"{result.Message} {ghnMsg}";
+                }
                 return RedirectToAction(nameof(Orders));
             }
 
@@ -160,10 +168,11 @@ namespace SweetCakeShop.Controllers
         public async Task<IActionResult> MakeCake(int orderId)
         {
             var result = await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
+            var ghnMsg = await _ghnService.CreateAutomatedOrderAsync(orderId);
             if (result.Success)
-                TempData["Success"] = result.Message;
+                TempData["Success"] = $"{result.Message} {ghnMsg}";
             else
-                TempData["Warning"] = result.Message;
+                TempData["Warning"] = $"{result.Message} {ghnMsg}";
 
             return RedirectToAction(nameof(OrderDetails), new { orderId });
         }

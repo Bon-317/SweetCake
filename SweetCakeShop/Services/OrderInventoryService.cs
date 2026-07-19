@@ -29,11 +29,13 @@ namespace SweetCakeShop.Services
             if (!order.OrderDetails.Any())
                 return (false, "Đơn hàng không có sản phẩm nào");
 
-            // Nếu đơn hàng đã là Shipped/Delivered/Completed hoặc Cancelled, không làm lại
-            if (order.Status == OrderStatuses.Shipped || order.Status == OrderStatuses.Delivered || 
-                order.Status == OrderStatuses.Completed || order.Status == OrderStatuses.Cancelled)
+            // Nếu đơn hàng đã là Confirmed/Shipped/Delivered/Completed/Cancelled thì không trừ kho lại
+            if (order.Status == OrderStatuses.Confirmed || order.Status == OrderStatuses.Shipped || 
+                order.Status == OrderStatuses.Delivered || order.Status == OrderStatuses.Completed || 
+                order.Status == OrderStatuses.Cancelled ||
+                (order.ConfirmedAt != null && order.Status != OrderStatuses.Pending && order.Status != "AwaitingPayment" && order.Status != "AwaitingConfirmation"))
             {
-                return (true, $"Đơn hàng đã ở trạng thái {order.Status}");
+                return (true, $"Đơn hàng đã được xác nhận và trừ kho trước đó ({order.Status})");
             }
 
             var productIds = order.OrderDetails.Select(od => od.ProductId).Distinct().ToList();

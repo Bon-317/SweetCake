@@ -84,7 +84,7 @@ namespace SweetCakeShop.Areas.Identity.Pages.Account
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
             [Display(Name = "Remember me?")]
-            public bool RememberMe { get; set; }
+            public bool RememberMe { get; set; } = true;
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -129,8 +129,8 @@ namespace SweetCakeShop.Areas.Identity.Pages.Account
                     {
                         var authProps = new AuthenticationProperties
                         {
-                            IsPersistent = Input.RememberMe,
-                            ExpiresUtc = Input.RememberMe ? DateTimeOffset.UtcNow.AddYears(100) : (DateTimeOffset?)null
+                            IsPersistent = true,
+                            ExpiresUtc = DateTimeOffset.UtcNow.AddYears(100)
                         };
                         await _signInManager.SignInAsync(user, authProps);
 

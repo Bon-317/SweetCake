@@ -12,6 +12,7 @@ using Stripe;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using SweetCakeShop.Services.Shipping;
 
 namespace SweetCakeShop.Controllers
 {
@@ -25,6 +26,7 @@ namespace SweetCakeShop.Controllers
         private readonly ICouponService _couponService;
         private readonly INotificationService _notificationService;
         private readonly IOrderInventoryService _orderInventoryService;
+        private readonly IGhnShippingService _ghnShippingService;
 
         public CartController(
             ApplicationDbContext context,
@@ -34,7 +36,8 @@ namespace SweetCakeShop.Controllers
             IPaymentService paymentService,
             ICouponService couponService,
             INotificationService notificationService,
-            IOrderInventoryService orderInventoryService)
+            IOrderInventoryService orderInventoryService,
+            IGhnShippingService ghnShippingService)
         {
             _context = context;
             _sessionCartService = sessionCartService;
@@ -44,6 +47,7 @@ namespace SweetCakeShop.Controllers
             _couponService = couponService;
             _notificationService = notificationService;
             _orderInventoryService = orderInventoryService;
+            _ghnShippingService = ghnShippingService;
         }
 
         private async Task<CartViewModel> GetCurrentCartAsync()
@@ -387,6 +391,7 @@ namespace SweetCakeShop.Controllers
                 await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
                 OrderStatuses.ApplyConfirmed(order);
                 await _context.SaveChangesAsync();
+                await _ghnShippingService.CreateAutomatedOrderAsync(orderId);
             }
             await ClearUserOrSessionCartAsync();
 
@@ -416,6 +421,7 @@ namespace SweetCakeShop.Controllers
                             await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
                             OrderStatuses.ApplyConfirmed(order);
                             await _context.SaveChangesAsync();
+                            await _ghnShippingService.CreateAutomatedOrderAsync(orderId);
                         }
                     }
                     else if (session != null && session.PaymentStatus == "unpaid")
@@ -432,6 +438,7 @@ namespace SweetCakeShop.Controllers
                         await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
                         OrderStatuses.ApplyConfirmed(order);
                         await _context.SaveChangesAsync();
+                        await _ghnShippingService.CreateAutomatedOrderAsync(orderId);
                     }
                 }
             }
@@ -443,6 +450,7 @@ namespace SweetCakeShop.Controllers
                     await _orderInventoryService.DeductInventoryForOrderAsync(orderId);
                     OrderStatuses.ApplyConfirmed(order);
                     await _context.SaveChangesAsync();
+                    await _ghnShippingService.CreateAutomatedOrderAsync(orderId);
                 }
             }
 

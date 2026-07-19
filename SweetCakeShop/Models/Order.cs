@@ -28,6 +28,7 @@ namespace SweetCakeShop.Models
         public DateTime? CompletedAt { get; set; }
         public decimal TotalPrice { get; set; }
         public string Status { get; set; } = "Pending";     // Pending, Confirmed, Shipped, Delivered, Completed, Cancelled
+        public string? GhnOrderCode { get; set; }           // Mã vận đơn Giao Hàng Nhanh (chống tạo trùng lặp)
 
         // Coupon / discount tracking
         public int? CouponId { get; set; }

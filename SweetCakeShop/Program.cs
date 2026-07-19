@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using SweetCakeShop.Data;
 using SweetCakeShop.Services;
 using Stripe;
+using System.IO;
 
 namespace SweetCakeShop
 {
@@ -21,6 +23,11 @@ namespace SweetCakeShop
                 options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
             });
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+            // Persist DataProtection keys so cookie encryption survives application restarts
+            builder.Services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
+                .SetApplicationName("SweetCakeShop");
 
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
                 .AddRoles<IdentityRole>()
