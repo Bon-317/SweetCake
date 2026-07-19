@@ -1,0 +1,8 @@
+**/.git
+**/.vs
+**/.agents
+**/bin
+**/obj
+**/scratch
+Dockerfile
+*.md
