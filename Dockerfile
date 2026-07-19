@@ -18,6 +18,8 @@ COPY --from=build /app/publish .
 
 # Render defaults container port to 8080 (standard for .NET 8+)
 ENV ASPNETCORE_URLS=http://+:8080
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "SweetCakeShop.dll"]
