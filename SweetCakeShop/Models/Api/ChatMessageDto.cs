@@ -30,5 +30,13 @@ namespace SweetCakeShop.Models.Api
         public string Reply { get; set; } = string.Empty;
         public List<ChatProductCardDto> Products { get; set; } = [];
         public List<string> QuickReplies { get; set; } = [];
+        public bool IsSilent { get; set; }
+        public bool IsAdminHandoff { get; set; }
+    }
+
+    public class ToggleHandoffRequest
+    {
+        public string SessionKey { get; set; } = string.Empty;
+        public bool Active { get; set; }
     }
 }

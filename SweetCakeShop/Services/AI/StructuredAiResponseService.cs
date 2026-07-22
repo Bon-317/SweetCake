@@ -23,8 +23,9 @@ namespace SweetCakeShop.Services.AI
             {
                 "GetCheapestProduct" => FormatSingleProduct(ctx, cheapest: true),
                 "GetHighestPriceProduct" => FormatSingleProduct(ctx, cheapest: false),
-                "GetTopSellingProduct" => FormatTopSellingConsultant(ctx),
-                "SearchProducts" or "RecommendProducts" or "GetProductList" => FormatRecommend(ctx),
+                "GetTopSellingProduct" => FormatTopSellingConsultant(ctx, mode),
+                "GetWorstSellingProduct" => FormatWorstSelling(ctx),
+                "SearchProducts" or "RecommendProducts" or "GetProductList" => FormatProductsByMode(ctx, mode),
                 "GetProductDetails" => FormatPriceLookup(ctx),
                 "GetRelatedProducts" => FormatRecommend(ctx, "Bánh cùng dòng tương tự:"),
                 "GetCakesSoldToday" => FormatCakesSoldToday(ctx),
@@ -46,11 +47,23 @@ namespace SweetCakeShop.Services.AI
             };
         }
 
-        private static string FormatTopSellingConsultant(AiBusinessContextDto ctx)
+        private static string FormatTopSellingConsultant(AiBusinessContextDto ctx, AiChatMode mode)
         {
-            if (ctx.Products.Count == 0) return NoData(AiChatMode.Customer, ctx.LanguageCode);
+            if (ctx.Products.Count == 0) return NoData(mode, ctx.LanguageCode);
+            if (mode == AiChatMode.Admin)
+            {
+                var lines = ctx.Products.Select(p => $"• **{p.Name}** — Đã bán: **{p.SoldQuantity}** phần | Giá: {p.Price:N0} VND");
+                return $"Dạ, danh sách sản phẩm bán chạy nhất hệ thống:\n{string.Join("\n", lines)}";
+            }
             var best = ctx.Products[0];
             return $"Dạ, **{best.Name}** 🎂 đang bán chạy nhất — **{best.Price:N0} VND**, đã bán **{best.SoldQuantity}** phần ạ.";
+        }
+
+        private static string FormatWorstSelling(AiBusinessContextDto ctx)
+        {
+            if (ctx.Products.Count == 0) return "Dạ, chưa có dữ liệu sản phẩm bán chậm ạ.";
+            var lines = ctx.Products.Select(p => $"• **{p.Name}** — Đã bán: **{p.SoldQuantity}** phần | Giá: {p.Price:N0} VND");
+            return $"Dạ, danh sách sản phẩm bán chậm/cần thúc đẩy marketing:\n{string.Join("\n", lines)}";
         }
 
         private static string FormatSingleProduct(AiBusinessContextDto ctx, bool cheapest)
@@ -69,6 +82,23 @@ namespace SweetCakeShop.Services.AI
             var rev = Fact(ctx, "RevenueToday");
             var ord = Fact(ctx, "OrdersToday");
             return $"Dạ, hôm nay shop đã bán **{qty}** phần bánh (từ đơn Confirmed/Completed). Doanh thu **{rev}**, **{ord}** đơn ạ.";
+        }
+
+        private static string FormatProductsByMode(AiBusinessContextDto ctx, AiChatMode mode)
+        {
+            if (ctx.Products.Count == 0) return NoData(mode, ctx.LanguageCode);
+
+            if (mode == AiChatMode.Admin)
+            {
+                var lines = ctx.Products.Select(p =>
+                {
+                    var cat = string.IsNullOrWhiteSpace(p.Category) ? "" : $"[{p.Category}] ";
+                    return $"• {cat}**{p.Name}** — Giá: {p.Price:N0} VND | Đã bán: {p.SoldQuantity} phần";
+                });
+                return $"Dạ, hệ thống hiện có tổng cộng **{ctx.Products.Count}** sản phẩm trong danh mục (hiển thị danh sách tiêu biểu):\n{string.Join("\n", lines)}";
+            }
+
+            return FormatRecommend(ctx);
         }
 
         private static string FormatRecommend(AiBusinessContextDto ctx, string? title = null)
@@ -154,6 +184,7 @@ namespace SweetCakeShop.Services.AI
 
         private static string FormatGeneric(AiChatMode mode, AiBusinessContextDto ctx)
         {
+            if (mode == AiChatMode.Admin && ctx.Products.Count > 0) return FormatProductsByMode(ctx, mode);
             if (mode == AiChatMode.Admin && ctx.Revenue != null) return FormatRevenueSummary(ctx);
             if (ctx.Products.Count > 0) return FormatRecommend(ctx);
             return NoData(mode, ctx.LanguageCode);
@@ -166,7 +197,7 @@ namespace SweetCakeShop.Services.AI
             lang == "en"
                 ? "I don't have exact data for that right now — try the Products page or Dashboard."
                 : mode == AiChatMode.Admin
-                    ? "Dạ, chưa có dữ liệu chính xác cho câu hỏi này — anh/chị thử lọc trên Dashboard nhé."
+                    ? "Dạ, chưa có số liệu chính xác cho câu hỏi này trong hệ thống."
                     : "Dạ, em chưa tra được số liệu chính xác. Anh/chị xem Sản phẩm trên web hoặc gọi 1900-SWEET ạ.";
     }
 }

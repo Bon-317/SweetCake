@@ -7,7 +7,6 @@ using SweetCakeShop.Services;
 
 namespace SweetCakeShop.Services.AI.Rag
 {
-    /// <summary>Chọn ĐÚNG 1 function — tránh GeneralConsultation mặc định gây trả lời sai.</summary>
     public class QueryPlannerService : IQueryPlannerService
     {
         private readonly IHttpClientFactory _httpClientFactory;
@@ -34,6 +33,15 @@ namespace SweetCakeShop.Services.AI.Rag
             var isAdmin = mode == AiChatMode.Admin;
             var allowed = isAdmin ? AiToolDefinitions.AdminFunctionNames : AiToolDefinitions.CustomerFunctionNames;
 
+            if (isAdmin)
+            {
+                var fastMap = SemanticFunctionMapper.Map(userMessage, session, true);
+                if (fastMap.Name is "AnalyzeRevenueTrend" or "GetTopSellingByPeriod" or "GetOrderChannelBreakdown" or "ExecuteDynamicAnalyticsQuery")
+                {
+                    return fastMap;
+                }
+            }
+
             var llmResult = await PlanWithLlmJsonAsync(isAdmin, userMessage, history, session, allowed, cancellationToken);
             if (llmResult != null && IsValidFunction(llmResult.Name, allowed) && llmResult.Name != "GeneralConsultation")
                 return llmResult;
@@ -42,7 +50,11 @@ namespace SweetCakeShop.Services.AI.Rag
             if (IsValidFunction(mapped.Name, allowed))
                 return mapped;
 
-            return new AiFunctionCall { Name = isAdmin ? "GetRevenueSummary" : "GetProductList", Arguments = new() };
+            return new AiFunctionCall
+            {
+                Name = isAdmin ? "ExecuteDynamicAnalyticsQuery" : "GetProductList",
+                Arguments = isAdmin ? new() { ["query"] = userMessage } : new()
+            };
         }
 
         private async Task<AiFunctionCall?> PlanWithLlmJsonAsync(
@@ -53,20 +65,32 @@ namespace SweetCakeShop.Services.AI.Rag
             string[] allowed,
             CancellationToken ct)
         {
-            var key = GetApiKey("OpenAI:ApiKey", "OPENAI_API_KEY")
-                      ?? GetApiKey("Gemini:ApiKey", "GEMINI_API_KEY");
-            if (key == null) return null;
-
-            var prompt = BuildPlannerPrompt(isAdmin, userMessage, history, session, allowed);
-
-            try
+            var openAiKey = GetApiKey("OpenAI:ApiKey", "OPENAI_API_KEY");
+            if (openAiKey != null)
             {
-                if (GetApiKey("OpenAI:ApiKey", "OPENAI_API_KEY") != null)
-                    return await PlanOpenAiAsync(key, prompt, ct);
+                try
+                {
+                    var prompt = BuildPlannerPrompt(isAdmin, userMessage, history, session, allowed);
+                    return await PlanOpenAiAsync(openAiKey, prompt, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "OpenAI planner failed");
+                }
             }
-            catch (Exception ex)
+
+            var geminiKey = GetApiKey("Gemini:ApiKey", "GEMINI_API_KEY");
+            if (geminiKey != null)
             {
-                _logger.LogWarning(ex, "OpenAI planner failed");
+                try
+                {
+                    var prompt = BuildPlannerPrompt(isAdmin, userMessage, history, session, allowed);
+                    return await PlanGeminiAsync(geminiKey, prompt, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Gemini planner failed");
+                }
             }
 
             return null;
@@ -87,17 +111,35 @@ namespace SweetCakeShop.Services.AI.Rag
                 sb.AppendLine($"{m.Role}: {m.Content}");
             sb.AppendLine($"User question: {userMessage}");
             sb.AppendLine("Allowed functions: " + string.Join(", ", allowed));
-            sb.AppendLine("""
-                Return JSON ONLY: {"function":"FunctionName","arguments":{}}
-                Rules:
-                - Pick the ONE best function for the question semantics (any language).
-                - cheapest/rẻ nhất -> GetCheapestProduct. expensive/đắt nhất -> GetHighestPriceProduct.
-                - best seller/bán chạy -> GetTopSellingProduct. chocolate/socola -> SearchProducts query socola.
-                - list cakes/danh sách -> GetProductList. kem -> SearchProducts query kem. mì/bread -> SearchProducts query mì.
-                - birthday/sinh nhật/girlfriend -> RecommendProducts with occasion.
-                - NEVER use GeneralConsultation if a specific function fits.
-                - Admin: revenue today -> GetTodayRevenue; cakes sold today -> GetCakesSoldToday; top customers -> GetTopCustomers.
-                """);
+            if (isAdmin)
+            {
+                sb.AppendLine("""
+                    Return JSON ONLY: {"function":"FunctionName","arguments":{}}
+                    Admin selection rules:
+                    - AnalyzeRevenueTrend: revenue trend comparison, growth/decline percentage, why ("vì sao tăng", "vì sao giảm", "so sánh doanh thu", "xu hướng"). arguments: {"periodType": "week" or "month"}.
+                    - GetTopSellingByPeriod: top selling products by period ("top bán chạy hôm nay", "bán chạy nhất tháng này", "7 ngày qua"). arguments: {"periodType": "today"/"week"/"month"/"year", "limit": 5}.
+                    - GetOrderChannelBreakdown: sales channels, member vs guest orders, regional province distribution, coupon summary ("kênh bán hàng", "thành viên vs vãng lai", "khu vực đặt hàng"). arguments: {}.
+                    - ExecuteDynamicAnalyticsQuery: custom SQL queries, specific coupon usage list ("mã giảm giá coupon dùng nhiều nhất"), low stock thresholds ("nguyên liệu sắp hết", "tồn kho"), pending orders details ("đơn hàng chờ xử lý", "sđt khách"). arguments: {"query": "user question string"}.
+                    - GetTodayRevenue / GetWeeklyRevenue / GetMonthlyRevenue / GetYearlyRevenue: simple total revenue amount ("doanh thu hôm nay bao nhiêu").
+                    - GetCakesSoldToday: simple number of cakes sold today.
+                    - GetTopCustomers: top spending customers ("khách hàng VIP").
+                    - GetIngredientsOverview: general ingredients list.
+                    - GetProductList / SearchProducts: general catalog lookup.
+                    """);
+            }
+            else
+            {
+                sb.AppendLine("""
+                    Return JSON ONLY: {"function":"FunctionName","arguments":{}}
+                    Rules:
+                    - Pick the ONE best function for the question semantics (any language).
+                    - cheapest/rẻ nhất -> GetCheapestProduct. expensive/đắt nhất -> GetHighestPriceProduct.
+                    - best seller/bán chạy -> GetTopSellingProduct. chocolate/socola -> SearchProducts query socola.
+                    - list cakes/danh sách/còn bao nhiêu sản phẩm -> GetProductList. kem -> SearchProducts query kem. mì/bread -> SearchProducts query mì.
+                    - birthday/sinh nhật/girlfriend -> RecommendProducts with occasion.
+                    - NEVER use GeneralConsultation if a specific function fits.
+                    """);
+            }
             return sb.ToString();
         }
 
@@ -132,21 +174,81 @@ namespace SweetCakeShop.Services.AI.Rag
             return ParseFunctionJson(content);
         }
 
+        private async Task<AiFunctionCall?> PlanGeminiAsync(string apiKey, string prompt, CancellationToken ct)
+        {
+            var model = _configuration["Gemini:Model"] ?? "gemini-2.5-flash";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+
+            var payload = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new[]
+                        {
+                            new { text = prompt + "\nOutput strict valid JSON only without markdown codeblocks or extra text." }
+                        }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0f,
+                    responseMimeType = "application/json"
+                }
+            };
+
+            var client = _httpClientFactory.CreateClient("Gemini");
+            using var response = await client.PostAsync(
+                url,
+                new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"), ct);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(body);
+            var text = doc.RootElement.GetProperty("candidates")[0]
+                .GetProperty("content").GetProperty("parts")[0]
+                .GetProperty("text").GetString()?.Trim();
+
+            if (text?.StartsWith("```json", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                text = text.Substring(7);
+                if (text.EndsWith("```")) text = text.Substring(0, text.Length - 3);
+                text = text.Trim();
+            }
+            else if (text?.StartsWith("```") == true)
+            {
+                text = text.Substring(3);
+                if (text.EndsWith("```")) text = text.Substring(0, text.Length - 3);
+                text = text.Trim();
+            }
+
+            return ParseFunctionJson(text);
+        }
+
         private static AiFunctionCall? ParseFunctionJson(string? json)
         {
             if (string.IsNullOrWhiteSpace(json)) return null;
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            var name = root.TryGetProperty("function", out var fn) ? fn.GetString() : null;
-            if (string.IsNullOrWhiteSpace(name)) return null;
-
-            var args = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-            if (root.TryGetProperty("arguments", out var argsEl) && argsEl.ValueKind == JsonValueKind.Object)
+            try
             {
-                foreach (var p in argsEl.EnumerateObject())
-                    args[p.Name] = p.Value.Clone();
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var name = root.TryGetProperty("function", out var fn) ? fn.GetString() : null;
+                if (string.IsNullOrWhiteSpace(name)) return null;
+
+                var args = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                if (root.TryGetProperty("arguments", out var argsEl) && argsEl.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var p in argsEl.EnumerateObject())
+                        args[p.Name] = p.Value.Clone();
+                }
+                return new AiFunctionCall { Name = name, Arguments = args };
             }
-            return new AiFunctionCall { Name = name, Arguments = args };
+            catch
+            {
+                return null;
+            }
         }
 
         private static bool IsValidFunction(string name, string[] allowed) =>
@@ -159,7 +261,6 @@ namespace SweetCakeShop.Services.AI.Rag
         }
     }
 
-    /// <summary>Semantic mapper khi LLM lỗi — dùng ý nghĩa câu, không spam một câu trả lời.</summary>
     internal static class SemanticFunctionMapper
     {
         public static AiFunctionCall Map(string message, ConversationSessionState session, bool isAdmin)
@@ -168,6 +269,22 @@ namespace SweetCakeShop.Services.AI.Rag
 
             if (isAdmin)
             {
+                if (Regex.IsMatch(t, @"tăng hay giảm|vì sao|vi sao|xu hướng|xu huong|so sánh.*doanh thu|trend|lý do|chênh lệch"))
+                {
+                    var period = Regex.IsMatch(t, @"tháng|thang|month") ? "month" : "week";
+                    return new AiFunctionCall { Name = "AnalyzeRevenueTrend", Arguments = new() { ["periodType"] = period } };
+                }
+                if (Regex.IsMatch(t, @"sql|truy vấn|truy van|thống kê động|query|db|mã giảm giá|ma giam gia|coupon|ngưỡng|nguong|báo động|bao dong|sắp hết|sap het|chờ|cho |pending|đơn mới|don moi|tình trạng|tinh trang"))
+                    return new AiFunctionCall { Name = "ExecuteDynamicAnalyticsQuery", Arguments = new() { ["query"] = message } };
+                if (Regex.IsMatch(t, @"kênh|kenh|channel|vãng lai|vang lai|thành viên|thanh vien|khu vực|khu vuc|tỉnh|tinh|thành phố|thanh pho"))
+                    return Fn("GetOrderChannelBreakdown");
+                if (Regex.IsMatch(t, @"bán chạy.*(tháng|tuần|hôm nay|năm|kỳ|7 ngày)|top.*(tháng|tuần|hôm nay|năm|kỳ|7 ngày)|ban chay.*(thang|tuan|hom nay|nam|7 ngay)"))
+                {
+                    var period = Regex.IsMatch(t, @"hôm nay|nay|today") ? "today"
+                        : Regex.IsMatch(t, @"tuần|tuan|week|7 ngày|7 ngay") ? "week"
+                        : Regex.IsMatch(t, @"năm|nam|year") ? "year" : "month";
+                    return new AiFunctionCall { Name = "GetTopSellingByPeriod", Arguments = new() { ["periodType"] = period, ["limit"] = 5 } };
+                }
                 if (Regex.IsMatch(t, @"bán.*(hôm nay|nay)|nay.*ban|cake.*sold|so.*banh.*hom nay"))
                     return new AiFunctionCall { Name = "GetCakesSoldToday", Arguments = new() };
                 if (Regex.IsMatch(t, @"doanh thu|revenue|doanh so"))
@@ -178,9 +295,14 @@ namespace SweetCakeShop.Services.AI.Rag
                     return Fn("GetTodayRevenue");
                 }
                 if (Regex.IsMatch(t, @"bán chạy|ban chay|best sell|top sell")) return Fn("GetTopSellingProduct");
+                if (Regex.IsMatch(t, @"ế nhất|e nhat|worst sell|bán kém|ban kem")) return Fn("GetWorstSellingProduct");
                 if (Regex.IsMatch(t, @"khách.*(nhiều|mua)|top customer|vip")) return Fn("GetTopCustomers");
                 if (Regex.IsMatch(t, @"nguyên liệu|nguyen lieu|ingredient|tồn kho|ton kho")) return Fn("GetIngredientsOverview");
-                return Fn("GetRevenueSummary");
+                if (Regex.IsMatch(t, @"sản phẩm|san pham|bánh|banh|còn|con|tồn|ton|danh sách|danh sach|bao nhiêu|loại|loai"))
+                    return Fn("GetProductList");
+                if (Regex.IsMatch(t, @"trung bình|trung binh|average|tb")) return Fn("GetAverageOrderValue");
+                if (Regex.IsMatch(t, @"tăng trưởng|tang truong|growth")) return Fn("GetRevenueGrowth");
+                return new AiFunctionCall { Name = "ExecuteDynamicAnalyticsQuery", Arguments = new() { ["query"] = message } };
             }
 
             if (Regex.IsMatch(t, @"rẻ nhất|re nhat|cheapest|lowest price|ít tiền|it tien"))

@@ -87,6 +87,7 @@ namespace SweetCakeShop
 
             builder.Services.AddScoped<SweetCakeShop.Services.AI.Rag.IQueryPlannerService, SweetCakeShop.Services.AI.Rag.QueryPlannerService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.Rag.IRagRetrieverService, SweetCakeShop.Services.AI.Rag.RagRetrieverService>();
+            builder.Services.AddScoped<SweetCakeShop.Services.AI.Rag.IHybridRagSearchService, SweetCakeShop.Services.AI.Rag.HybridRagSearchService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.Rag.IConsultantResponseService, SweetCakeShop.Services.AI.Rag.ConsultantResponseService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IWebsiteKnowledgeService, SweetCakeShop.Services.AI.WebsiteKnowledgeService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IChatEnrichmentService, SweetCakeShop.Services.AI.ChatEnrichmentService>();
@@ -102,8 +103,10 @@ namespace SweetCakeShop
             builder.Services.AddScoped<SweetCakeShop.Services.AI.ICartIntentService, SweetCakeShop.Services.AI.CartIntentService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IOrderHandoffService, SweetCakeShop.Services.AI.OrderHandoffService>();
             builder.Services.AddScoped<SweetCakeShop.Services.AI.IStoreKnowledgeService, SweetCakeShop.Services.AI.StoreKnowledgeService>();
+            builder.Services.AddScoped<SweetCakeShop.Services.AI.IAdminAdvancedAnalyticsService, SweetCakeShop.Services.AI.AdminAdvancedAnalyticsService>();
+            builder.Services.AddScoped<SweetCakeShop.Services.AI.Customer.ICustomerToolCallContext, SweetCakeShop.Services.AI.Customer.CustomerToolCallContext>();
+            builder.Services.AddScoped<SweetCakeShop.Services.AI.Customer.IIntelligentCustomerChatService, SweetCakeShop.Services.AI.Customer.SemanticKernelCustomerAssistant>();
             builder.Services.AddScoped<IAiChatService, AiChatService>();
-
             builder.Services.AddScoped<SweetCakeShop.Services.Chat.IChatIdentityService, SweetCakeShop.Services.Chat.ChatIdentityService>();
             builder.Services.AddScoped<SweetCakeShop.Services.Chat.IChatHistoryService, SweetCakeShop.Services.Chat.ChatHistoryService>();
             builder.Services.AddScoped<SweetCakeShop.Services.Chat.IChatTokenMergeService, SweetCakeShop.Services.Chat.ChatTokenMergeService>();

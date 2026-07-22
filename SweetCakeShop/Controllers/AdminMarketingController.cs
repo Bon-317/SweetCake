@@ -59,7 +59,7 @@ namespace SweetCakeShop.Controllers
         {
             var news = await _context.News.FindAsync(id);
             if (news == null) return NotFound();
-            return View(news);
+            return View("CreateNews", news);
         }
 
         [HttpPost]
@@ -67,7 +67,7 @@ namespace SweetCakeShop.Controllers
         public async Task<IActionResult> EditNews(News model)
         {
             if (!ModelState.IsValid)
-                return View(model);
+                return View("CreateNews", model);
 
             _context.News.Update(model);
             await _context.SaveChangesAsync();
@@ -135,7 +135,7 @@ namespace SweetCakeShop.Controllers
         {
             var promo = await _context.Promotions.FindAsync(id);
             if (promo == null) return NotFound();
-            return View(promo);
+            return View("CreatePromotion", promo);
         }
 
         [HttpPost]
@@ -143,7 +143,7 @@ namespace SweetCakeShop.Controllers
         public async Task<IActionResult> EditPromotion(Promotion model)
         {
             if (!ModelState.IsValid)
-                return View(model);
+                return View("CreatePromotion", model);
 
             _context.Promotions.Update(model);
             await _context.SaveChangesAsync();

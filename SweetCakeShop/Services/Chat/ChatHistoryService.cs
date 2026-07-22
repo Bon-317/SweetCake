@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SweetCakeShop.Data;
 using SweetCakeShop.Models;
 using SweetCakeShop.Models.Api;
@@ -9,11 +10,13 @@ namespace SweetCakeShop.Services.Chat
     {
         private readonly ApplicationDbContext _db;
         private readonly IChatIdentityService _identity;
+        private readonly IMemoryCache _cache;
 
-        public ChatHistoryService(ApplicationDbContext db, IChatIdentityService identity)
+        public ChatHistoryService(ApplicationDbContext db, IChatIdentityService identity, IMemoryCache cache)
         {
             _db = db;
             _identity = identity;
+            _cache = cache;
         }
 
         private IQueryable<CustomerChatMessage> Query()
@@ -102,24 +105,28 @@ namespace SweetCakeShop.Services.Chat
                 .Take(500)
                 .ToListAsync(ct);
 
-            var groups = all
+            var groupList = all
                 .Where(m => !string.IsNullOrEmpty(m.UserId) || !string.IsNullOrEmpty(m.ChatToken))
                 .GroupBy(m => !string.IsNullOrEmpty(m.UserId) ? "usr_" + m.UserId : "tok_" + m.ChatToken)
-                .Select(g =>
-                {
-                    var last = g.First();
-                    return (object)new
-                    {
-                        sessionKey = g.Key,
-                        lastMessage = last.Content,
-                        lastSender = last.Sender,
-                        lastUpdated = last.CreatedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy"),
-                        count = g.Count()
-                    };
-                })
                 .ToList();
 
-            return groups;
+            var result = new List<object>();
+            foreach (var g in groupList)
+            {
+                var last = g.First();
+                var isHandoff = await IsUnderAdminAssistanceAsync(g.Key, ct);
+                result.Add(new
+                {
+                    sessionKey = g.Key,
+                    lastMessage = last.Content,
+                    lastSender = last.Sender,
+                    lastUpdated = last.CreatedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy"),
+                    count = g.Count(),
+                    isHandoff = isHandoff
+                });
+            }
+
+            return result;
         }
 
         public async Task<List<ChatMessageDto>> GetHistoryBySessionKeyAsync(string sessionKey, CancellationToken ct = default)
@@ -166,7 +173,55 @@ namespace SweetCakeShop.Services.Chat
             };
             _db.CustomerChatMessages.Add(msg);
             await _db.SaveChangesAsync(ct);
+            await SetAdminAssistanceAsync(sessionKey, true, ct);
             return msg;
+        }
+
+        public Task SetAdminAssistanceAsync(string sessionKey, bool active, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(sessionKey)) return Task.CompletedTask;
+            if (active)
+            {
+                _cache.Set($"Handoff_Active_{sessionKey}", true, TimeSpan.FromHours(4));
+                _cache.Remove($"Handoff_ResumeAI_{sessionKey}");
+            }
+            else
+            {
+                _cache.Remove($"Handoff_Active_{sessionKey}");
+                _cache.Set($"Handoff_ResumeAI_{sessionKey}", DateTime.UtcNow, TimeSpan.FromHours(4));
+            }
+            return Task.CompletedTask;
+        }
+
+        public async Task<bool> IsUnderAdminAssistanceAsync(string sessionKey, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(sessionKey)) return false;
+
+            if (_cache.TryGetValue($"Handoff_Active_{sessionKey}", out bool active) && active)
+                return true;
+
+            if (_cache.TryGetValue($"Handoff_ResumeAI_{sessionKey}", out DateTime resumeTime))
+            {
+                // Kiểm tra xem tin nhắn Admin mới nhất có sau khi bấm ResumeAI hay không
+                IQueryable<CustomerChatMessage> q;
+                if (sessionKey.StartsWith("usr_")) q = _db.CustomerChatMessages.Where(m => m.UserId == sessionKey.Substring(4));
+                else if (sessionKey.StartsWith("tok_")) q = _db.CustomerChatMessages.Where(m => m.ChatToken == sessionKey.Substring(4));
+                else return false;
+
+                var latestAdmin = await q.Where(m => m.Sender == "Admin" && m.CreatedAt > resumeTime)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .FirstOrDefaultAsync(ct);
+                return latestAdmin != null;
+            }
+
+            // Nếu không có cache, kiểm tra DB trong 45 phút qua có tin nhắn Admin nào không
+            IQueryable<CustomerChatMessage> query;
+            if (sessionKey.StartsWith("usr_")) query = _db.CustomerChatMessages.Where(m => m.UserId == sessionKey.Substring(4));
+            else if (sessionKey.StartsWith("tok_")) query = _db.CustomerChatMessages.Where(m => m.ChatToken == sessionKey.Substring(4));
+            else return false;
+
+            var cutoff = DateTime.UtcNow.AddMinutes(-45);
+            return await query.AnyAsync(m => m.Sender == "Admin" && m.CreatedAt >= cutoff, ct);
         }
     }
 }

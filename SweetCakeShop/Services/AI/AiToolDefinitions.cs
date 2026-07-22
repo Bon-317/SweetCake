@@ -27,6 +27,10 @@ namespace SweetCakeShop.Services.AI
 
         public static readonly string[] AdminFunctionNames =
         [
+            "AnalyzeRevenueTrend",
+            "GetTopSellingByPeriod",
+            "GetOrderChannelBreakdown",
+            "ExecuteDynamicAnalyticsQuery",
             "GetTodayRevenue",
             "GetWeeklyRevenue",
             "GetMonthlyRevenue",
@@ -109,6 +113,10 @@ namespace SweetCakeShop.Services.AI
             "GetAverageOrderValue" => "Average order value (admin only).",
             "GetPendingOrders" => "Count of pending orders (admin only).",
             "GetInventoryAlerts" => "Low stock ingredients (admin only).",
+            "AnalyzeRevenueTrend" => "Compare current revenue vs previous period to analyze trend (increase/decrease) and explain details why (Admin analytics).",
+            "GetTopSellingByPeriod" => "Get top selling products filtered by specific time period: today, week, month, year (Admin analytics).",
+            "GetOrderChannelBreakdown" => "Analyze sales channels bringing the most orders: members vs guests, top provinces, coupons (Admin analytics).",
+            "ExecuteDynamicAnalyticsQuery" => "Execute dynamic Text-to-SQL / real-time database query to answer complex or custom statistical questions from Admin.",
             "GetRevenueSummary" => "Business overview revenue (admin only).",
             "GeneralConsultation" => "General bakery advice when no specific data function fits; still use other tools if data is needed.",
             _ => "SweetCakeShop data function."
@@ -135,6 +143,10 @@ namespace SweetCakeShop.Services.AI
 
             return name switch
             {
+                "AnalyzeRevenueTrend" => Props(("periodType", "string", "Time period to analyze: week, month (default week)", false)),
+                "GetTopSellingByPeriod" => Props(("periodType", "string", "Period: today, week, month, year (default month)", false), ("limit", "integer", "Number of products (default 5)", false)),
+                "GetOrderChannelBreakdown" => Props(),
+                "ExecuteDynamicAnalyticsQuery" => Props(("query", "string", "The natural language or statistical query detail to investigate", true)),
                 "GetTopSellingProduct" => Props(("limit", "integer", "How many products (default 5)", false)),
                 "SearchProducts" => Props(("query", "string", "Search terms e.g. chocolate, socola, fruit", true), ("limit", "integer", "Max results", false)),
                 "RecommendProducts" => Props(

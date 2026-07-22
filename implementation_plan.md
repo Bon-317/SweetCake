@@ -422,11 +422,8 @@ gantt
 
 ## Open Questions
 
-> [!WARNING]
-> **API Keys exposed in appsettings.json**: The Stripe, Gemini, and OpenAI API keys are committed in plaintext. These should be moved to User Secrets or environment variables before any deployment. Should I address this as part of the security hardening phase?
-
-> [!NOTE]
-> The `csharp SweetCakeShop/` directory contains a secondary `CartController` and `PaymentService` that appear to be an alternative/older implementation. Should these be removed/consolidated, or kept as-is?
+> [!IMPORTANT]
+> API keys are no longer stored in `appsettings.json`. Keys that were previously committed must be revoked and recreated, then supplied through User Secrets or environment variables before deployment.
 
 ---
 

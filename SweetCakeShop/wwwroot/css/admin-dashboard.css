@@ -273,7 +273,7 @@ body.admin-body {
 
 .ai-msg {
     margin-bottom: 0.75rem;
-    max-width: 90%;
+    max-width: 88%;
 }
 
 .ai-msg.user {
@@ -283,21 +283,25 @@ body.admin-body {
 
 .ai-msg .bubble {
     display: inline-block;
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.85rem;
     border-radius: 1rem;
     font-size: 0.9rem;
-    line-height: 1.4;
-    white-space: pre-wrap;
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    text-align: left;
 }
 
 .ai-msg.user .bubble {
     background: var(--scs-pink);
     color: #fff;
+    white-space: pre-wrap;
 }
 
 .ai-msg.bot .bubble {
     background: #fff;
     border: 1px solid #eee;
+    white-space: normal;
 }
 
 .ai-msg.admin .bubble {
@@ -306,6 +310,7 @@ body.admin-body {
     color: #432800;
     box-shadow: 0 3px 10px rgba(255, 193, 7, 0.25);
     font-weight: 500;
+    white-space: normal;
 }
 
 .ai-typing-indicator .typing-dots {

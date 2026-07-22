@@ -52,7 +52,10 @@
                             <small class="text-muted d-block" id="currentSessionSubtitle">Đang kết nối trực tiếp...</small>
                         </div>
                     </div>
-                    <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="sessionStatusBadge" class="badge bg-secondary px-3 py-2 rounded-pill small d-flex align-items-center gap-1">---</span>
+                        <button type="button" id="btnPauseAi" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold d-none" onclick="toggleHandoff(true)" title="Dừng AI tự động trả lời để Admin tiếp quản trực tiếp">⏸ Dừng AI (Tiếp quản)</button>
+                        <button type="button" id="btnResumeAi" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold d-none" onclick="toggleHandoff(false)" title="Bật lại AI tự động tư vấn cho khách hàng này">🤖 Trả lại AI tự động</button>
                         <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small">Mã phiên: <strong id="currentSessionKeyBadge">---</strong></span>
                     </div>
                 </div>
@@ -117,7 +120,7 @@
 
         signalRConnection.on("ReceiveCustomerMessage", (data) => {
             // data: { sessionKey, sender, text, timestamp }
-            console.log("Real-time customer message received:", data);
+            console.log("Real-time message received:", data);
             
             // Update or add to sessions list
             if (!sessionsMap[data.sessionKey]) {
@@ -127,13 +130,14 @@
                     lastSender: data.sender,
                     lastUpdated: data.timestamp,
                     count: 1,
-                    unread: true
+                    unread: true,
+                    isHandoff: false
                 };
             } else {
                 sessionsMap[data.sessionKey].lastMessage = data.text;
                 sessionsMap[data.sessionKey].lastSender = data.sender;
                 sessionsMap[data.sessionKey].lastUpdated = data.timestamp;
-                if (currentSessionKey !== data.sessionKey) {
+                if (currentSessionKey !== data.sessionKey && data.sender === 'user') {
                     sessionsMap[data.sessionKey].unread = true;
                 }
             }
@@ -142,8 +146,8 @@
             // If current session is open, append message right into the chat box immediately
             if (currentSessionKey === data.sessionKey) {
                 appendLiveMsg(data.sender, data.text, data.timestamp);
-            } else {
-                // Play subtle audio/notification for new incoming message
+            } else if (data.sender === 'user') {
+                // Play subtle audio/notification for new incoming message from customer
                 playNotifySound();
             }
         });
@@ -152,10 +156,21 @@
             if (sessionsMap[data.sessionKey]) {
                 sessionsMap[data.sessionKey].lastMessage = data.text;
                 sessionsMap[data.sessionKey].lastSender = "Admin";
+                sessionsMap[data.sessionKey].isHandoff = true;
                 renderSessionsList();
             }
-            if (currentSessionKey === data.sessionKey && data.sender === "Admin") {
-                // Already appended locally when sent or if sent from another admin window
+            if (currentSessionKey === data.sessionKey) {
+                updateHandoffUI(true);
+            }
+        });
+
+        signalRConnection.on("ReceiveHandoffStatusChange", (data) => {
+            if (sessionsMap[data.sessionKey]) {
+                sessionsMap[data.sessionKey].isHandoff = data.active;
+                renderSessionsList();
+            }
+            if (currentSessionKey === data.sessionKey) {
+                updateHandoffUI(data.active);
             }
         });
 
@@ -197,10 +212,14 @@
             const isSelected = currentSessionKey === s.sessionKey ? 'active' : '';
             const unreadBadge = s.unread ? '<span class="unread-dot"></span>' : '';
             const displayId = s.sessionKey.startsWith('usr_') ? 'Khách #' + s.sessionKey.substring(4, 12) : 'Khách Vãng Lai #' + s.sessionKey.substring(4, 10);
+            const handoffBadge = s.isHandoff 
+                ? '<span class="badge bg-warning text-dark border px-2 py-0 ms-1" style="font-size:0.65rem;" title="Admin đang tiếp quản">👑 Admin</span>' 
+                : '<span class="badge bg-light text-secondary border px-2 py-0 ms-1" style="font-size:0.65rem;" title="AI đang trả lời tự động">🤖 AI</span>';
+
             return `
                 <div class="session-item p-3 ${isSelected}" onclick="selectSession('${s.sessionKey}')">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="fw-bold text-dark d-flex align-items-center gap-2">${displayId} ${unreadBadge}</span>
+                        <span class="fw-bold text-dark d-flex align-items-center gap-1">${displayId} ${handoffBadge} ${unreadBadge}</span>
                         <small class="text-muted" style="font-size: 0.75rem;">${s.lastUpdated || ''}</small>
                     </div>
                     <div class="text-truncate text-muted small">
@@ -240,10 +259,57 @@
                     const timeStr = new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                     appendLiveMsg(m.sender, m.content, timeStr);
                 });
+                updateHandoffUI(data.isHandoff || false);
+                if (sessionsMap[sessionKey]) {
+                    sessionsMap[sessionKey].isHandoff = data.isHandoff || false;
+                    renderSessionsList();
+                }
             }
         } catch (e) {
             console.error("Lỗi tải lịch sử chat:", e);
             messagesEl.innerHTML = '<div class="p-4 text-center text-danger">Không thể tải lịch sử trò chuyện.</div>';
+        }
+    }
+
+    function updateHandoffUI(isHandoff) {
+        const badge = document.getElementById('sessionStatusBadge');
+        const btnPause = document.getElementById('btnPauseAi');
+        const btnResume = document.getElementById('btnResumeAi');
+        if (!badge || !btnPause || !btnResume) return;
+
+        if (isHandoff) {
+            badge.className = 'badge bg-warning text-dark border px-3 py-2 rounded-pill small d-flex align-items-center gap-1 shadow-sm';
+            badge.innerHTML = '👑 <strong>Admin đang tiếp quản</strong> (AI tạm dừng)';
+            btnPause.classList.add('d-none');
+            btnResume.classList.remove('d-none');
+        } else {
+            badge.className = 'badge bg-light text-secondary border px-3 py-2 rounded-pill small d-flex align-items-center gap-1';
+            badge.innerHTML = '🤖 <strong>AI tự động tư vấn</strong>';
+            btnPause.classList.remove('d-none');
+            btnResume.classList.add('d-none');
+        }
+    }
+
+    async function toggleHandoff(active) {
+        if (!currentSessionKey) return;
+        try {
+            const res = await fetch('/api/Chat/admin/toggle-handoff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionKey: currentSessionKey, active: active }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                updateHandoffUI(active);
+                if (sessionsMap[currentSessionKey]) {
+                    sessionsMap[currentSessionKey].isHandoff = active;
+                    renderSessionsList();
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi chuyển đổi chế độ Handoff:", e);
+            alert("Đã xảy ra lỗi khi đổi trạng thái AI/Admin.");
         }
     }
 
@@ -281,14 +347,15 @@
         input.value = '';
         btn.disabled = true;
 
-        // Immediately append admin reply locally for responsive feel
         const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
         appendLiveMsg('Admin', text, timeStr);
         if (sessionsMap[currentSessionKey]) {
             sessionsMap[currentSessionKey].lastMessage = text;
             sessionsMap[currentSessionKey].lastSender = 'Admin';
+            sessionsMap[currentSessionKey].isHandoff = true;
             renderSessionsList();
         }
+        updateHandoffUI(true);
 
         try {
             const res = await fetch('/api/Chat/admin/reply-customer', {
@@ -326,8 +393,8 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
             gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
             osc.connect(gain);

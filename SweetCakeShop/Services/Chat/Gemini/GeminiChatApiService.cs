@@ -30,7 +30,7 @@ namespace SweetCakeShop.Services.Chat.Gemini
             var apiKey = _configuration["Gemini:ApiKey"] ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
             if (string.IsNullOrWhiteSpace(apiKey)) return null;
 
-            var model = _configuration["Gemini:Model"] ?? "gemini-1.5-flash";
+            var model = _configuration["Gemini:Model"] ?? "gemini-2.5-flash";
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey.Trim()}";
 
             var contents = new List<GeminiContent>();

@@ -28,8 +28,8 @@ namespace SweetCakeShop.Services.AI
         [
             "Bánh sinh nhật gợi ý?",
             "Bánh rẻ nhất?",
-            "Giao hàng mấy ngày?",
-            "Muốn đặt hàng"
+            "Khuyến mãi nào không?",
+            "Tiệm có bao nhiêu loại bánh?"
         ];
     }
 }

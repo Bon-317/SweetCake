@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using SweetCakeShop.Hubs;
 using SweetCakeShop.Models.Api;
 using SweetCakeShop.Services.AI;
+using SweetCakeShop.Services.AI.Customer;
 using SweetCakeShop.Services.AI.Rag;
 using SweetCakeShop.Services.Chat.Gemini;
 using SweetCakeShop.Services.Chat.OpenAi;
@@ -19,11 +20,13 @@ namespace SweetCakeShop.Services.Chat
         private readonly IChatTokenMergeService _merge;
         private readonly IProductCatalogForAiService _catalog;
         private readonly IProductIntentResolver _resolver;
+        private readonly IIntelligentCustomerChatService _intelligentAssistant;
         private readonly IGeminiChatApiService _gemini;
         private readonly IOpenAiChatApiService _openAi;
         private readonly ITopicFilterService _topicFilter;
         private readonly IChatSecurityService _security;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IOrderHandoffService _orderHandoff;
 
         public CustomerProductChatService(
             IChatIdentityService identity,
@@ -31,22 +34,26 @@ namespace SweetCakeShop.Services.Chat
             IChatTokenMergeService merge,
             IProductCatalogForAiService catalog,
             IProductIntentResolver resolver,
+            IIntelligentCustomerChatService intelligentAssistant,
             IGeminiChatApiService gemini,
             IOpenAiChatApiService openAi,
             ITopicFilterService topicFilter,
             IChatSecurityService security,
-            IHubContext<ChatHub> hubContext)
+            IHubContext<ChatHub> hubContext,
+            IOrderHandoffService orderHandoff)
         {
             _identity = identity;
             _history = history;
             _merge = merge;
             _catalog = catalog;
             _resolver = resolver;
+            _intelligentAssistant = intelligentAssistant;
             _gemini = gemini;
             _openAi = openAi;
             _topicFilter = topicFilter;
             _security = security;
             _hubContext = hubContext;
+            _orderHandoff = orderHandoff;
         }
 
         public async Task<ChatHistoryResponse> GetChatHistoryAsync(CancellationToken ct = default)
@@ -69,11 +76,11 @@ namespace SweetCakeShop.Services.Chat
                 };
             }
 
-            var messages = await _history.GetHistoryForUiAsync(ct);
+            var list = await _history.GetHistoryForUiAsync(ct);
             return new ChatHistoryResponse
             {
                 SessionKey = sessionKey,
-                Messages = messages,
+                Messages = list,
                 QuickReplies = ChatProductCardMapper.DefaultCustomerQuickReplies()
             };
         }
@@ -106,24 +113,74 @@ namespace SweetCakeShop.Services.Chat
                 timestamp = DateTime.Now.ToString("HH:mm")
             }, ct);
 
+            if (_orderHandoff.RequestsHumanAgent(text))
+            {
+                await _history.SetAdminAssistanceAsync(sessionKey, true, ct);
+                var handoffReply = _orderHandoff.GetImmediateHandoffReply("vi");
+                await _history.AddModelMessageAsync(handoffReply, ct);
+
+                await _hubContext.Clients.Group("AdminRoom").SendAsync("ReceiveCustomerMessage", new
+                {
+                    sessionKey = sessionKey,
+                    sender = "model",
+                    text = handoffReply,
+                    timestamp = DateTime.Now.ToString("HH:mm")
+                }, ct);
+
+                return new SendChatMessageResponse
+                {
+                    Success = true,
+                    SessionKey = sessionKey,
+                    Reply = handoffReply,
+                    IsAdminHandoff = true,
+                    QuickReplies = ["Gửi thêm chi tiết yêu cầu", "Khiếu nại/Góp ý", "Món bánh bán chạy nhất?"]
+                };
+            }
+
+            if (await _history.IsUnderAdminAssistanceAsync(sessionKey, ct))
+            {
+                return new SendChatMessageResponse
+                {
+                    Success = true,
+                    SessionKey = sessionKey,
+                    Reply = "",
+                    IsSilent = true,
+                    IsAdminHandoff = true
+                };
+            }
+
             var recent = await _history.GetRecentAsync(6, ct);
 
-            var resolved = await _resolver.ResolveAsync(text, request.ProductId, recent, ct);
             string reply;
-            var products = ChatProductCardMapper.ToCards(resolved.Products);
+            List<ChatProductCardDto>? products = null;
+            try
+            {
+                var resolved = await _resolver.ResolveAsync(text, request.ProductId, recent, ct);
+                products = ChatProductCardMapper.ToCards(resolved.Products);
+                var intelligentReply = await _intelligentAssistant.TryGenerateReplyAsync(text, recent, ct);
 
-            if (resolved.UseDirectReply)
-            {
-                reply = TrimSentences(resolved.DirectReply, 3);
+                if (intelligentReply != null)
+                {
+                    reply = intelligentReply.Reply;
+                    products = ChatProductCardMapper.ToCards(intelligentReply.Products);
+                }
+                else if (resolved.UseDirectReply)
+                {
+                    reply = resolved.DirectReply;
+                }
+                else
+                {
+                    var catalog = await _catalog.BuildRelevantCatalogTextAsync(text, 12, ct);
+                    var system = BuildSystemPrompt(catalog);
+                    reply = await _gemini.GenerateReplyAsync(system, recent, text, resolved.FactsBlock, ct)
+                              ?? await _openAi.GenerateReplyAsync(system, recent, text, resolved.FactsBlock, ct)
+                              ?? "Dạ, em chưa kết nối được AI — anh/chị gọi **1900-SWEET** hoặc xem Menu trên web nhé ạ!";
+                    reply = TrimSentences(reply, 5);
+                }
             }
-            else
+            catch (Exception)
             {
-                var catalog = await _catalog.BuildCatalogTextAsync(ct);
-                var system = BuildSystemPrompt(catalog);
-                reply = await _gemini.GenerateReplyAsync(system, recent, text, resolved.FactsBlock, ct)
-                          ?? await _openAi.GenerateReplyAsync(system, recent, text, resolved.FactsBlock, ct)
-                          ?? "Dạ, em chưa kết nối được AI — anh/chị gọi **1900-SWEET** hoặc xem Menu trên web nhé ạ!";
-                reply = TrimSentences(reply, 3);
+                reply = "Dạ, hiện tại kết nối đến trợ lý AI đang gián đoạn một chút. Anh/chị vui lòng thử lại hoặc xem trực tiếp trên Menu web nhé ạ!";
             }
 
             await _history.AddModelMessageAsync(reply, ct);
@@ -136,14 +193,6 @@ namespace SweetCakeShop.Services.Chat
                 timestamp = DateTime.Now.ToString("HH:mm")
             }, ct);
 
-            await _hubContext.Clients.Group(sessionKey).SendAsync("ReceiveMessage", new
-            {
-                sender = "model",
-                text = reply,
-                products = products,
-                timestamp = DateTime.Now.ToString("HH:mm")
-            }, ct);
-
             return new SendChatMessageResponse
             {
                 Success = true,
@@ -151,7 +200,7 @@ namespace SweetCakeShop.Services.Chat
                 Reply = reply,
                 Products = products,
                 QuickReplies = request.ProductId.HasValue
-                    ? ["Giá món này?", "Bánh tương tự?", "Giao hàng?", "Đặt hàng"]
+                    ? ["Giá món này?", "Bánh tương tự?", "Món này có giảm giá không?"]
                     : ChatProductCardMapper.DefaultCustomerQuickReplies()
             };
         }
@@ -167,8 +216,9 @@ namespace SweetCakeShop.Services.Chat
 
         private static string TrimSentences(string text, int max)
         {
+            if (string.IsNullOrWhiteSpace(text)) return text;
             var cleaned = text.Trim();
-            var parts = Regex.Split(cleaned, @"(?<=[.!?…])\s+");
+            var parts = Regex.Split(cleaned, @"(?<=[.!?…])(?:\s+|(?=\r?\n))");
             return parts.Length <= max ? cleaned : string.Join(" ", parts.Take(max));
         }
     }

@@ -33,20 +33,20 @@ namespace SweetCakeShop.Services.AI.Rag
             CancellationToken cancellationToken = default)
         {
             var system = BuildConsultantSystemPrompt(mode);
-            var user = BuildUserPrompt(userMessage, knowledge, session, languageCode);
+            var user = BuildUserPrompt(userMessage, knowledge, session, languageCode, mode);
 
             var geminiKey = GetApiKey("Gemini:ApiKey", "GEMINI_API_KEY");
             if (geminiKey != null)
             {
-                var r = await TryGeminiAsync(geminiKey, system, history, user, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(r)) return TrimToMaxSentences(r!, 3);
+                var r = await TryGeminiAsync(geminiKey, system, history, user, mode, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(r)) return mode == AiChatMode.Admin ? r!.Trim() : TrimToMaxSentences(r!, 3);
             }
 
             var openAiKey = GetApiKey("OpenAI:ApiKey", "OPENAI_API_KEY");
             if (openAiKey != null)
             {
-                var r = await TryOpenAiAsync(openAiKey, system, history, user, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(r)) return TrimToMaxSentences(r!, 3);
+                var r = await TryOpenAiAsync(openAiKey, system, history, user, mode, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(r)) return mode == AiChatMode.Admin ? r!.Trim() : TrimToMaxSentences(r!, 3);
             }
 
             return null;
@@ -57,9 +57,13 @@ namespace SweetCakeShop.Services.AI.Rag
             if (mode == AiChatMode.Admin)
             {
                 return """
-                    Bạn là nhân viên phân tích nội bộ SweetCakeShop — thân thiện, chuyên nghiệp, NGẮN GỌN.
-                    CHỈ trả lời dựa trên [Dữ liệu cửa hàng]. Không bịa số liệu.
-                    Trả lời đúng câu hỏi (doanh thu, bánh bán, khách VIP, nguyên liệu...). Tối đa 3 câu. Có thể dùng 📊.
+                    Bạn là Trợ lý AI Quản trị Phân tích Kinh doanh nâng cao (Executive AI Analyst) của SweetCakeShop — thông minh, sắc bén, mạch lạc.
+                    NHIỆM VỤ: Phân tích số liệu từ [Dữ liệu cửa hàng] (doanh thu, xu hướng tăng/giảm vì sao, top bán chạy, kênh bán hàng, Text-to-SQL động).
+                    QUY TẮC BẮT BUỘC:
+                    - CHỈ dùng số liệu thực tế trong [Dữ liệu cửa hàng], tuyệt đối không bịa số liệu.
+                    - Trình bày mạch lạc bằng các ý gạch đầu dòng, nêu rõ nguyên nhân ("Vì sao doanh thu tăng/giảm?"), có số liệu cụ thể và tỷ lệ %.
+                    - Nếu có bảng biểu hay danh sách từ Text-to-SQL động, hãy hiển thị rõ ràng, dễ đọc cho Ban Quản trị.
+                    - Dùng icon 📈 📊 🎂 💰 để báo cáo trực quan, chuyên nghiệp.
                     """;
             }
 
@@ -83,11 +87,16 @@ namespace SweetCakeShop.Services.AI.Rag
             string userMessage,
             RagKnowledgeDocument knowledge,
             ConversationSessionState session,
-            string languageCode)
+            string languageCode,
+            AiChatMode mode)
         {
             var focus = session.Focus?.ProductName != null
                 ? $"\nSản phẩm đang nói: {session.Focus.ProductName}"
                 : "";
+            var lengthInstruction = mode == AiChatMode.Admin
+                ? "Trả lời rõ ràng, chi tiết và đầy đủ các ý phân tích kinh doanh, có số liệu và lý do."
+                : "Trả lời ĐÚNG câu hỏi, tối đa 3 câu.";
+
             return $"""
                 Ngôn ngữ trả lời: {languageCode}
                 Loại truy vấn dữ liệu: {knowledge.PrimaryFunction}
@@ -96,9 +105,9 @@ namespace SweetCakeShop.Services.AI.Rag
                 [Dữ liệu cửa hàng]
                 {knowledge.StoreDataBlock}
 
-                Câu hỏi khách: {userMessage}
+                Câu hỏi: {userMessage}
 
-                Trả lời ĐÚNG câu hỏi, tối đa 3 câu.
+                {lengthInstruction}
                 """;
         }
 
@@ -115,11 +124,12 @@ namespace SweetCakeShop.Services.AI.Rag
             string system,
             IReadOnlyList<ChatMessage> history,
             string userPrompt,
+            AiChatMode mode,
             CancellationToken ct)
         {
             try
             {
-                var model = _configuration["Gemini:Model"] ?? "gemini-2.0-flash";
+                var model = _configuration["Gemini:Model"] ?? "gemini-2.5-flash";
                 var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
                 var contents = new List<object>();
                 foreach (var m in history.TakeLast(4))
@@ -133,7 +143,7 @@ namespace SweetCakeShop.Services.AI.Rag
                 {
                     systemInstruction = new { parts = new[] { new { text = system } } },
                     contents,
-                    generationConfig = new { temperature = GetConsultantTemperature(), maxOutputTokens = GetMaxTokens() }
+                    generationConfig = new { temperature = GetConsultantTemperature(), maxOutputTokens = GetMaxTokens(mode) }
                 };
 
                 var client = _httpClientFactory.CreateClient("Gemini");
@@ -159,6 +169,7 @@ namespace SweetCakeShop.Services.AI.Rag
             string system,
             IReadOnlyList<ChatMessage> history,
             string userPrompt,
+            AiChatMode mode,
             CancellationToken ct)
         {
             try
@@ -176,7 +187,7 @@ namespace SweetCakeShop.Services.AI.Rag
                 {
                     model = _configuration["OpenAI:Model"] ?? "gpt-4o-mini",
                     temperature = GetConsultantTemperature(),
-                    max_tokens = GetMaxTokens(),
+                    max_tokens = GetMaxTokens(mode),
                     messages
                 };
 
@@ -213,8 +224,9 @@ namespace SweetCakeShop.Services.AI.Rag
                 : 0.15f;
         }
 
-        private int GetMaxTokens()
+        private int GetMaxTokens(AiChatMode mode)
         {
+            if (mode == AiChatMode.Admin) return 1000;
             var v = _configuration["AiChat:MaxOutputTokens"];
             return int.TryParse(v, out var n) ? Math.Clamp(n, 80, 500) : 280;
         }

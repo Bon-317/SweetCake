@@ -39,11 +39,14 @@ window.SweetCakeAiChat = function (config) {
     }
 
     function renderMarkdown(text) {
+        if (!text) return '';
         let html = escapeHtml(text);
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
         html = html.replace(/^[-•] (.+)$/gm, '<li>$1</li>');
-        html = html.replace(/(<li>.*<\/li>\n?)+/gs, m => '<ul class="mb-0 ps-3">' + m + '</ul>');
+        html = html.replace(/(<li>.*<\/li>\n?)+/gs, m => '<ul class="mb-2 ps-3">' + m + '</ul>');
+        html = html.replace(/<\/li>\n+/g, '</li>');
+        html = html.replace(/<\/ul>\n+/g, '</ul>');
         html = html.replace(/\n/g, '<br>');
         return html;
     }
@@ -177,17 +180,23 @@ window.SweetCakeAiChat = function (config) {
             });
             const data = await res.json();
             removeTyping();
-            const text = data.reply ?? data.Reply ?? 'Không có phản hồi.';
-            const products = data.products ?? data.Products;
             const sKey = data.sessionKey ?? data.SessionKey;
             if (!customerSessionKey && sKey) {
                 initCustomerSignalR(sKey);
             }
-            appendMsg('model', text, products);
-            const qr = data.quickReplies ?? data.QuickReplies;
-            if (qr?.length) renderQuickReplies(qr);
-            if (config.onCartAction && text.toLowerCase().includes('giỏ')) {
-                try { config.onCartAction(); } catch (_) { }
+
+            if (data.isSilent || data.IsSilent) {
+                // Khi Admin đang tiếp quản trực tiếp (Handoff), AI giữ im lặng không trả lời tự động.
+                // Khách hàng đợi Admin phản hồi real-time qua SignalR ReceiveMessage.
+            } else {
+                const text = data.reply ?? data.Reply ?? 'Không có phản hồi.';
+                const products = data.products ?? data.Products;
+                appendMsg('model', text, products);
+                const qr = data.quickReplies ?? data.QuickReplies;
+                if (qr?.length) renderQuickReplies(qr);
+                if (config.onCartAction && text.toLowerCase().includes('giỏ')) {
+                    try { config.onCartAction(); } catch (_) { }
+                }
             }
         } catch {
             removeTyping();
@@ -219,7 +228,7 @@ window.SweetCakeAiChat = function (config) {
             .build();
 
         hubConnection.on("ReceiveMessage", function (data) {
-            if (data && data.sender && data.sender.toLowerCase() !== 'user') {
+            if (data && data.sender && data.sender.toLowerCase() === 'admin') {
                 removeTyping();
                 appendMsg(data.sender, data.text, data.products, true);
                 if (!panel.classList.contains('open')) {

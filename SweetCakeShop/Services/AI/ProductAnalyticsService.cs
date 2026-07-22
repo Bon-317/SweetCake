@@ -2,14 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using SweetCakeShop.Constants;
 using SweetCakeShop.Data;
 using SweetCakeShop.Models.AI;
+using SweetCakeShop.Services.AI.Rag;
 
 namespace SweetCakeShop.Services.AI
 {
     public class ProductAnalyticsService : IProductAnalyticsService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHybridRagSearchService _hybridSearch;
 
-        public ProductAnalyticsService(ApplicationDbContext context) => _context = context;
+        public ProductAnalyticsService(ApplicationDbContext context, IHybridRagSearchService hybridSearch)
+        {
+            _context = context;
+            _hybridSearch = hybridSearch;
+        }
 
         public async Task<ProductFactDto?> GetHighestPriceAsync(CancellationToken ct = default)
         {
@@ -122,33 +128,7 @@ namespace SweetCakeShop.Services.AI
 
         public async Task<IReadOnlyList<ProductFactDto>> SearchProductsAsync(string query, int take = 8, CancellationToken ct = default)
         {
-            var term = query.Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(term)) return await GetCatalogAsync(take, ct);
-
-            var tokens = term.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var q = from p in _context.Products.AsNoTracking()
-                    join c in _context.Categories.AsNoTracking() on p.CategoryId equals c.CategoryId
-                    select new { p.ProductId, p.ProductName, p.Price, p.Description, p.Image, c.CategoryName };
-
-            foreach (var token in tokens)
-            {
-                var t = token;
-                q = q.Where(x =>
-                    x.ProductName.ToLower().Contains(t) ||
-                    (x.Description != null && x.Description.ToLower().Contains(t)) ||
-                    x.CategoryName.ToLower().Contains(t));
-            }
-
-            return await q.OrderBy(x => x.Price).Take(take)
-                .Select(x => new ProductFactDto
-                {
-                    ProductId = x.ProductId,
-                    Name = x.ProductName,
-                    Price = x.Price,
-                    Category = x.CategoryName,
-                    Description = x.Description,
-                    ImageUrl = x.Image
-                }).ToListAsync(ct);
+            return await _hybridSearch.SearchProductsAsync(query, take, fallbackToCatalog: true, ct);
         }
 
         public async Task<ProductFactDto?> GetProductDetailsAsync(string productName, CancellationToken ct = default) =>
@@ -167,6 +147,7 @@ namespace SweetCakeShop.Services.AI
                 orderby p.Price
                 select new ProductFactDto
                 {
+                    ProductId = p.ProductId,
                     Name = p.ProductName,
                     Price = p.Price,
                     Category = c.CategoryName,

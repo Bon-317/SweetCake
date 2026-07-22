@@ -15,9 +15,11 @@ namespace SweetCakeShop.Services.AI
         private readonly IChatRoleGuardService _roleGuard;
         private readonly ICartIntentService _cartIntent;
         private readonly CartService _cart;
+        private readonly IAdminAdvancedAnalyticsService _advancedAnalytics;
 
         private static readonly HashSet<string> AdminOnlyFunctions =
         [
+            "AnalyzeRevenueTrend", "GetTopSellingByPeriod", "GetOrderChannelBreakdown", "ExecuteDynamicAnalyticsQuery",
             "GetTodayRevenue", "GetWeeklyRevenue", "GetMonthlyRevenue", "GetYearlyRevenue",
             "GetAverageOrderValue", "GetPendingOrders", "GetInventoryAlerts", "GetRevenueSummary",
             "GetRevenueGrowth", "GetWorstSellingProduct", "GetCakesSoldToday",
@@ -32,7 +34,8 @@ namespace SweetCakeShop.Services.AI
             IRecommendationService recommendations,
             IChatRoleGuardService roleGuard,
             ICartIntentService cartIntent,
-            CartService cart)
+            CartService cart,
+            IAdminAdvancedAnalyticsService advancedAnalytics)
         {
             _products = products;
             _revenue = revenue;
@@ -42,6 +45,7 @@ namespace SweetCakeShop.Services.AI
             _roleGuard = roleGuard;
             _cartIntent = cartIntent;
             _cart = cart;
+            _advancedAnalytics = advancedAnalytics;
         }
 
         public async Task<AiBusinessContextDto> ExecuteAsync(
@@ -251,6 +255,52 @@ namespace SweetCakeShop.Services.AI
                     ctx.Orders = await _orders.GetOrderMetricsAsync(ct);
                     ctx.Products = (await _products.GetTopSellingAsync(3, ct)).ToList();
                     ctx.HasData = true;
+                    break;
+                case "AnalyzeRevenueTrend":
+                    var trendPeriod = AiToolDefinitions.GetStringArg(call.Arguments, "periodType", "week");
+                    var trend = await _advancedAnalytics.AnalyzeRevenueTrendAsync(trendPeriod, ct);
+                    ctx.Facts.Add(new ContextFact { Key = "PeriodComparison", Value = trend.PeriodLabel });
+                    ctx.Facts.Add(new ContextFact { Key = "CurrentRevenue", Value = $"{trend.CurrentPeriodRevenue:N0} VND ({trend.CurrentOrders} đơn, AOV {trend.CurrentAverageOrderValue:N0} VND)" });
+                    ctx.Facts.Add(new ContextFact { Key = "PreviousRevenue", Value = $"{trend.PreviousPeriodRevenue:N0} VND ({trend.PreviousOrders} đơn, AOV {trend.PreviousAverageOrderValue:N0} VND)" });
+                    ctx.Facts.Add(new ContextFact { Key = "GrowthPercentage", Value = $"{trend.GrowthPercentage:N1}% ({trend.TrendDirection})" });
+                    for (int i = 0; i < trend.KeyReasons.Count; i++)
+                        ctx.Facts.Add(new ContextFact { Key = $"Reason_{i + 1}", Value = trend.KeyReasons[i] });
+                    ctx.HasData = true;
+                    break;
+                case "GetTopSellingByPeriod":
+                    var topPeriod = AiToolDefinitions.GetStringArg(call.Arguments, "periodType", "month");
+                    var topLimit = AiToolDefinitions.GetIntArg(call.Arguments, "limit", 5);
+                    var topList = await _advancedAnalytics.GetTopSellingByPeriodAsync(topPeriod, topLimit, ct);
+                    ctx.Facts.Add(new ContextFact { Key = "TopSellingPeriod", Value = topList.FirstOrDefault()?.PeriodLabel ?? topPeriod });
+                    for (int i = 0; i < topList.Count; i++)
+                    {
+                        var item = topList[i];
+                        ctx.Facts.Add(new ContextFact { Key = $"TopCake_{i + 1}", Value = $"{item.ProductName} ({item.CategoryName}) — Đã bán: {item.TotalQuantitySold} cái, Doanh thu: {item.TotalRevenueGenerated:N0} VND" });
+                        ctx.Products.Add(new ProductFactDto { ProductId = item.ProductId, Name = item.ProductName, Category = item.CategoryName, SoldQuantity = item.TotalQuantitySold, Price = item.TotalQuantitySold > 0 ? item.TotalRevenueGenerated / item.TotalQuantitySold : 0 });
+                    }
+                    ctx.HasData = topList.Count > 0;
+                    break;
+                case "GetOrderChannelBreakdown":
+                    var channels = await _advancedAnalytics.GetOrderChannelBreakdownAsync(ct);
+                    ctx.Facts.Add(new ContextFact { Key = "ChannelSummary", Value = channels.PrimaryChannelSummary });
+                    ctx.Facts.Add(new ContextFact { Key = "TotalOrdersRevenue", Value = $"{channels.TotalOrders} đơn — {channels.TotalRevenue:N0} VND" });
+                    ctx.Facts.Add(new ContextFact { Key = "MemberVsGuest", Value = $"Thành viên: {channels.MemberOrdersCount} đơn ({channels.MemberOrdersRevenue:N0} VND) | Vãng lai: {channels.GuestOrdersCount} đơn ({channels.GuestOrdersRevenue:N0} VND)" });
+                    ctx.Facts.Add(new ContextFact { Key = "CouponBreakdown", Value = $"{channels.CouponAppliedOrdersCount} đơn dùng mã giảm giá (tiết kiệm {channels.CouponTotalDiscount:N0} VND)" });
+                    ctx.HasData = true;
+                    break;
+                case "ExecuteDynamicAnalyticsQuery":
+                    var dynQuery = AiToolDefinitions.GetStringArg(call.Arguments, "query", userMessage);
+                    var dynRes = await _advancedAnalytics.ExecuteDynamicAnalyticsQueryAsync(dynQuery, ct);
+                    ctx.Facts.Add(new ContextFact { Key = "QueryIntent", Value = dynRes.QueryIntent });
+                    if (!string.IsNullOrWhiteSpace(dynRes.ExecutedSqlOrSummary))
+                        ctx.Facts.Add(new ContextFact { Key = "ExecutedSQL", Value = dynRes.ExecutedSqlOrSummary });
+                    ctx.Facts.Add(new ContextFact { Key = "AnalysisConclusion", Value = dynRes.NaturalLanguageConclusion });
+                    for (int i = 0; i < dynRes.Rows.Count; i++)
+                    {
+                        var rowText = string.Join(" | ", dynRes.Rows[i].Select(kv => $"{kv.Key}: {kv.Value}"));
+                        ctx.Facts.Add(new ContextFact { Key = $"ResultRow_{i + 1}", Value = rowText });
+                    }
+                    ctx.HasData = dynRes.Rows.Count > 0 || !string.IsNullOrWhiteSpace(dynRes.NaturalLanguageConclusion);
                     break;
                 case "GeneralConsultation":
                     ctx.Facts.Add(new ContextFact { Key = "Note", Value = "Chưa xác định truy vấn cụ thể — hãy hỏi rõ hơn." });

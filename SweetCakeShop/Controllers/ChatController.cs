@@ -67,8 +67,8 @@ namespace SweetCakeShop.Controllers
         public ActionResult<object> CustomerSuggestions([FromQuery] int? productId)
         {
             var replies = productId.HasValue
-                ? new[] { "Giá món này?", "Bánh tương tự?", "Giao hàng?", "Muốn đặt hàng" }
-                : new[] { "Bánh sinh nhật gợi ý?", "Bánh rẻ nhất?", "Giao hàng mấy ngày?", "Muốn đặt hàng" };
+                ? new[] { "Giá món này?", "Bánh tương tự?", "Món này có giảm giá không?" }
+                : new[] { "Bánh sinh nhật gợi ý?", "Bánh rẻ nhất?", "Khuyến mãi nào không?", "Tiệm có bao nhiêu loại bánh?" };
             return Ok(new { quickReplies = replies });
         }
 
@@ -93,6 +93,20 @@ namespace SweetCakeShop.Controllers
             return Ok(new { success = true });
         }
 
+        [HttpGet("admin/my-history")]
+        [Authorize(Roles = nameof(Roles.Admin))]
+        public ActionResult<object> GetAdminMyHistory()
+        {
+            var history = _adminMemory.GetHistory(AiChatMode.Admin);
+            var messages = history.Select(h => new
+            {
+                sender = h.Role == "user" ? "user" : "model",
+                content = h.Content,
+                timestamp = h.Timestamp.ToString("HH:mm")
+            }).ToList();
+            return Ok(new { success = true, messages });
+        }
+
         [HttpGet("admin/sessions")]
         [Authorize(Roles = nameof(Roles.Admin))]
         public async Task<ActionResult<object>> AdminGetSessions(CancellationToken ct)
@@ -109,7 +123,8 @@ namespace SweetCakeShop.Controllers
                 return BadRequest(new { success = false, message = "Thiếu SessionKey" });
 
             var messages = await _historyService.GetHistoryBySessionKeyAsync(sessionKey, ct);
-            return Ok(new { success = true, messages });
+            var isHandoff = await _historyService.IsUnderAdminAssistanceAsync(sessionKey, ct);
+            return Ok(new { success = true, messages, isHandoff });
         }
 
         [HttpPost("admin/reply-customer")]
@@ -139,6 +154,32 @@ namespace SweetCakeShop.Controllers
             }, ct);
 
             return Ok(new { success = true });
+        }
+
+        [HttpPost("admin/toggle-handoff")]
+        [Authorize(Roles = nameof(Roles.Admin))]
+        public async Task<ActionResult<object>> AdminToggleHandoff(
+            [FromBody] ToggleHandoffRequest request,
+            CancellationToken ct)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.SessionKey))
+                return BadRequest(new { success = false, message = "Thiếu SessionKey." });
+
+            await _historyService.SetAdminAssistanceAsync(request.SessionKey, request.Active, ct);
+
+            await _hubContext.Clients.Group("AdminRoom").SendAsync("ReceiveHandoffStatusChange", new
+            {
+                sessionKey = request.SessionKey,
+                active = request.Active
+            }, ct);
+
+            await _hubContext.Clients.Group(request.SessionKey).SendAsync("ReceiveHandoffStatusChange", new
+            {
+                sessionKey = request.SessionKey,
+                active = request.Active
+            }, ct);
+
+            return Ok(new { success = true, active = request.Active });
         }
     }
 }
