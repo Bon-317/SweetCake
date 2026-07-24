@@ -16,15 +16,23 @@ namespace SweetCakeShop.Services.Shipping
     {
         private readonly HttpClient _httpClient;
         private readonly IServiceProvider _serviceProvider;
-        private const string Token = "7d0a6149-81a0-11f1-a973-aee5264794df";
-        private const string ShopId = "201573"; // Shop ID liên kết với Token trên Sandbox
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
+        private readonly string Token;
+        private readonly string ShopId;
         private const string BaseUrl = "https://dev-online-gateway.ghn.vn/shiip/public-api";
 
-        public GhnShippingService(HttpClient httpClient, IServiceProvider serviceProvider)
+        public GhnShippingService(HttpClient httpClient, IServiceProvider serviceProvider, Microsoft.Extensions.Configuration.IConfiguration configuration)
         {
             _httpClient = httpClient;
             _serviceProvider = serviceProvider;
-            _httpClient.DefaultRequestHeaders.Add("Token", Token);
+            _configuration = configuration;
+            Token = _configuration["GHN:Token"] ?? "";
+            ShopId = _configuration["GHN:ShopId"] ?? "";
+            
+            if (!string.IsNullOrEmpty(Token))
+            {
+                _httpClient.DefaultRequestHeaders.Add("Token", Token);
+            }
         }
 
         public async Task<List<GhnLocationDto>> GetProvincesAsync()
