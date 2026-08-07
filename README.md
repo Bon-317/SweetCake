@@ -73,11 +73,9 @@ SweetCakeShop/
 - `Services/AI` và `Services/Chat`: bộ máy Hybrid RAG, Native Function Calling, định tuyến ngữ nghĩa (`QueryPlannerService`), phân tích nâng cao Admin (`AdminAdvancedAnalyticsService`), lưu lịch sử chat persistent.
 - `Hubs/ChatHub.cs`: SignalR Hub hỗ trợ giao tiếp theo thời gian thực (Live Monitoring & Handoff) giữa Khách hàng và Admin.
 
-## Cập nhật nổi bật: Lộ trình 3 bước Chatbot AI Toàn diện (Hoàn thành 100%)
-
 Hệ thống Chatbot AI của SweetCakeShop đã được nâng cấp toàn diện theo chuẩn enterprise, tích hợp sâu kiến trúc **Hybrid RAG**, **Native Function Calling**, **SignalR Real-time Monitoring/Handoff** và **Executive Advanced Analytics**.
 
-### Bước 1: Native Function Calling & Hybrid RAG Search (Hướng A - Khách hàng)
+### Bước 1: Native Function Calling & Hybrid RAG Search 
 - **Hybrid RAG Engine (`HybridRagSearchService`):** Xây dựng bộ máy tìm kiếm lai kết hợp từ khóa ngữ nghĩa và full-text search tiếng Việt. Tự động loại bỏ stopword, chấm điểm đa trường (Tên sản phẩm, Mô tả, Danh mục) và ưu tiên hiển thị các sản phẩm bán chạy nhất (`SoldQuantity`).
 - **Native Function Calling (`BakeryCustomerPlugin` & `QueryPlannerService`):** AI được trang bị năng lực tự gọi hàm thời gian thực trực tiếp từ SQL Server:
   - `search_products`: Tìm kiếm sản phẩm thông minh theo từ khóa hoặc sở thích.
@@ -138,8 +136,6 @@ $env:GEMINI_API_KEY="your_gemini_api_key"
 $env:OPENAI_API_KEY="your_openai_api_key"
 ```
 
-Không nên commit API key thật lên repository. Nếu key đã từng bị commit, nên thu hồi và tạo key mới trên trang quản trị dịch vụ tương ứng.
-
 ## Cách chạy dự án
 
 Chạy từ thư mục gốc repo:
@@ -168,35 +164,6 @@ Role: Admin
 
 Tài khoản thường có thể đăng ký trực tiếp ở trang Identity `/Identity/Account/Register`.
 
-## 🎓 CẨM NANG BẢO VỆ ĐỒ ÁN (Dành cho Vấn đáp)
-
-Phần này đúc kết những kiến trúc cốt lõi nhất của dự án để sinh viên dễ dàng ôn tập và tự tin trả lời các câu hỏi phản biện của giảng viên.
-
-### 1. Kiến trúc AI Chatbot (RAG + Function Calling)
-Chatbot không đơn thuần là gọi API của ChatGPT/Gemini, mà được thiết kế theo chuẩn Enterprise gồm 4 bước (xem file `AiChatService.cs`):
-- **Bước 1 (Lọc từ khóa - C#):** Sử dụng C# thuần (`TopicFilterService` và `ChatSecurityService`) để chặn đứng các câu hỏi lạc đề, nhạy cảm, cố tình moi móc tài khoản Admin. Việc chặn ở máy chủ giúp **tiết kiệm tiền API**, **tốc độ phản hồi cực nhanh (low latency)** và **bảo mật tuyệt đối 100%**.
-- **Bước 2 (Lên kế hoạch - Planner):** Gửi câu hỏi cho AI thông qua `QueryPlannerService` kèm theo danh bạ các hàm được phép gọi (`AiToolDefinitions`). Bắt buộc AI trả về định dạng JSON chứa tên hàm cần thực thi (Ví dụ: `{"function": "SearchProducts"}`).
-- **Bước 3 (Thực thi - Executor):** C# đọc tên hàm từ JSON, chọc thẳng vào SQL Server để kéo dữ liệu bánh thật ra ngoài (`AiFunctionExecutorService.cs`). Đảm bảo dữ liệu luôn mới nhất và chính xác 100%.
-- **Bước 4 (Tạo ngữ cảnh & Trả lời - Consultant):** Gom toàn bộ dữ liệu thật móc được ở Bước 3, cộng thêm các quy định giao hàng, chính sách cửa hàng (`StoreKnowledgeService`), gói lại thành một khối Prompt khổng lồ gửi cho AI. AI nhìn vào dữ liệu thật đó và sinh ra câu văn giao tiếp tự nhiên. (Đây là kỹ thuật RAG giúp AI không bao giờ bịa đặt).
-
-### 2. Xử lý khiếu nại & Chuyển giao nhân viên (Human Handoff)
-- Hệ thống sử dụng `OrderHandoffService` để liên tục dùng Biểu thức chính quy (Regex) rà quét tin nhắn của khách.
-- Khi phát hiện các từ khóa báo động như *"khiếu nại", "dở quá", "tệ quá", "lừa đảo"*, hệ thống lập tức:
-  1. Ngắt quyền tự động trả lời của AI.
-  2. Bắn thông báo khẩn cấp vào màn hình của Admin thông qua SignalR.
-  3. Cho phép Admin nhảy vào chat trực tiếp với khách để xử lý khủng hoảng.
-
-### 3. Tìm kiếm thông minh (Smart Search)
-Không sử dụng lệnh `LIKE` truyền thống của SQL, hệ thống kết hợp nhiều kỹ thuật (xem `VietnameseNormalizerService.cs` và `SmartSearchService.cs`):
-- **Unicode Normalization:** Lột sạch dấu tiếng Việt, đưa chữ về viết thường để so khớp (Khách gõ "banh kem" vẫn tìm ra "Bánh Kem").
-- **Stop-words Filtering:** Tự động chặt câu của khách, vứt đi các từ vô nghĩa ("bánh", "kem", "loại") để chỉ tập trung dò tìm các từ khóa chính ("matcha", "socola").
-- **Relevance Scoring:** Chấm điểm dựa trên trọng số (Khớp tên bánh: 1.0 điểm, khớp mô tả: 0.5 điểm, khớp danh mục: 0.3 điểm).
-- **Levenshtein Distance:** Cứu vớt lỗi đánh máy. Khách gõ "mách cha" sai chính tả vẫn được chấm điểm vớt để tìm ra bánh "Matcha".
-
-### 4. Giao tiếp thời gian thực (SignalR)
-- **Tại sao dùng SignalR?** Thay vì để màn hình Admin phải F5 (tải lại trang) liên tục mỗi 3 giây để kiểm tra tin nhắn mới, SignalR duy trì một kết nối WebSocket 2 chiều.
-- Khi khách gõ tin nhắn, Server nhận được sẽ dùng lệnh `_hubContext.Clients.Group("AdminRoom").SendAsync(...)` để **chủ động bắn** tin nhắn đó thẳng vào màn hình Admin. Nhờ vậy, Admin theo dõi được toàn bộ cuộc hội thoại của khách theo thời gian thực (Real-time Live Monitoring) mà không làm sập server.
-
 ## Database và migration
 
 Migration nằm tại:
@@ -215,13 +182,4 @@ dotnet ef database update
 
 Trong runtime hiện tại, app đã tự gọi `Database.Migrate()` khi khởi động, nên với database mới chỉ cần chạy app là schema và dữ liệu mẫu sẽ được tạo.
 
-## Ghi chú phát triển
 
-- Route mặc định: `{controller=Home}/{action=Index}/{id?}`.
-- Razor Pages Identity được map bằng `app.MapRazorPages()`.
-- Static assets nằm trong `wwwroot`.
-- Ảnh upload sản phẩm nằm trong `wwwroot/uploads/products`.
-- Cart anonymous dùng Session; cart user đăng nhập dùng DB.
-- Review sản phẩm yêu cầu đăng nhập.
-- Checkout yêu cầu đăng nhập.
-- Admin dashboard và API admin yêu cầu role `Admin`.
