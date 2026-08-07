@@ -1,19 +1,19 @@
-﻿# SweetCakeShop
+# SweetCakeShop
 
-SweetCakeShop lÃ  website thÆ°Æ¡ng máº¡i Ä‘iá»‡n tá»­ bÃ¡n bÃ¡nh Ä‘Æ°á»£c xÃ¢y báº±ng ASP.NET Core MVC. Dá»± Ã¡n cÃ³ cÃ¡c chá»©c nÄƒng chÃ­nh: xem danh má»¥c/sáº£n pháº©m, tÃ¬m kiáº¿m, giá» hÃ ng, mÃ£ giáº£m giÃ¡, Ä‘áº·t hÃ ng, thanh toÃ¡n COD hoáº·c Stripe, quáº£n trá»‹ sáº£n pháº©m/Ä‘Æ¡n hÃ ng/kho/nguyÃªn liá»‡u, dashboard doanh thu, xuáº¥t Excel/PDF vÃ  chatbot AI cho khÃ¡ch hÃ ng/admin.
+SweetCakeShop là website thương mại điện tử bán bánh được xây bằng ASP.NET Core MVC. Dự án có các chức năng chính: xem danh mục/sản phẩm, tìm kiếm, giỏ hàng, mã giảm giá, đặt hàng, thanh toán COD hoặc Stripe, quản trị sản phẩm/đơn hàng/kho/nguyên liệu, dashboard doanh thu, xuất Excel/PDF và chatbot AI cho khách hàng/admin.
 
-## CÃ´ng nghá»‡ sá»­ dá»¥ng
+## Công nghệ sử dụng
 
 - ASP.NET Core MVC + Razor Pages Identity
 - .NET SDK 10, target framework `net10.0`
 - Entity Framework Core + SQL Server
 - ASP.NET Core Identity, Roles, Session, MemoryCache
 - Bootstrap, jQuery, CSS/JS trong `wwwroot`
-- Stripe Checkout cho thanh toÃ¡n online
+- Stripe Checkout cho thanh toán online
 - Gemini/OpenAI cho chatbot AI
-- ClosedXML vÃ  QuestPDF cho xuáº¥t Excel/PDF
+- ClosedXML và QuestPDF cho xuất Excel/PDF
 
-## Cáº¥u trÃºc dá»± Ã¡n
+## Cấu trúc dự án
 
 ```text
 SweetCakeShop/
@@ -28,7 +28,7 @@ SweetCakeShop/
 |   |-- Properties/
 |   |   `-- launchSettings.json
 |   |-- Constants/
-|   |   `-- Háº±ng sá»‘ role, tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng, intent chat, bá»™ lá»c doanh thu
+|   |   `-- Hằng số role, trạng thái đơn hàng, intent chat, bộ lọc doanh thu
 |   |-- Controllers/
 |   |   `-- Controller cho Home, Products, Cart, Admin, Dashboard, Chat, Notification
 |   |-- Data/
@@ -42,13 +42,13 @@ SweetCakeShop/
 |   |   |-- AI/
 |   |   `-- ViewModels/
 |   |-- Services/
-|   |   |-- Service nghiá»‡p vá»¥: cart, order, coupon, payment, revenue, export
+|   |   |-- Service nghiệp vụ: cart, order, coupon, payment, revenue, export
 |   |   |-- AI/
 |   |   `-- Chat/
 |   |-- Views/
-|   |   `-- Razor views cho customer vÃ  admin
+|   |   `-- Razor views cho customer và admin
 |   |-- Areas/Identity/
-|   |   `-- Razor Pages Ä‘Äƒng kÃ½, Ä‘Äƒng nháº­p, quáº£n lÃ½ tÃ i khoáº£n
+|   |   `-- Razor Pages đăng ký, đăng nhập, quản lý tài khoản
 |   |-- ViewComponents/
 |   |   `-- CartBadgeViewComponent
 |   `-- wwwroot/
@@ -59,69 +59,69 @@ SweetCakeShop/
 |       `-- lib/
 ```
 
-## CÃ¡c module chÃ­nh
+## Các module chính
 
-- `Program.cs`: cáº¥u hÃ¬nh DI, DbContext, Identity, Session, HttpClient, Stripe, middleware, routing vÃ  seed dá»¯ liá»‡u khi app khá»Ÿi Ä‘á»™ng.
-- `Data/ApplicationDbContext.cs`: khai bÃ¡o DbSet vÃ  quan há»‡ database cho sáº£n pháº©m, danh má»¥c, Ä‘Æ¡n hÃ ng, chi tiáº¿t Ä‘Æ¡n, nguyÃªn liá»‡u, cÃ´ng thá»©c, giá» hÃ ng DB, Ä‘Ã¡nh giÃ¡, coupon, thÃ´ng bÃ¡o, chat history.
-- `Data/SeedData.cs`: tá»± cháº¡y migration vÃ  seed dá»¯ liá»‡u máº«u cho danh má»¥c, sáº£n pháº©m, nguyÃªn liá»‡u, cÃ´ng thá»©c.
-- `Data/IdentitySeed.cs`: seed role `Admin` vÃ  tÃ i khoáº£n admin máº·c Ä‘á»‹nh.
-- `Controllers/ProductsController.cs`: danh sÃ¡ch sáº£n pháº©m, tÃ¬m kiáº¿m/lá»c, chi tiáº¿t sáº£n pháº©m, review.
-- `Controllers/CartController.cs`: giá» hÃ ng, coupon, checkout, táº¡o Ä‘Æ¡n, chá»n thanh toÃ¡n, xÃ¡c nháº­n thanh toÃ¡n.
-- `Controllers/AdminController.cs`: quáº£n lÃ½ Ä‘Æ¡n hÃ ng, sáº£n pháº©m, danh má»¥c, nguyÃªn liá»‡u, cÃ´ng thá»©c, coupon.
-- `Controllers/AdminDashboardController.cs`: dashboard doanh thu vÃ  xuáº¥t bÃ¡o cÃ¡o.
-- `Controllers/ChatController.cs` vÃ  `Controllers/AIChatController.cs`: API chat khÃ¡ch hÃ ng/admin, láº¥y lá»‹ch sá»­ chat persistent vÃ  quáº£n lÃ½ giÃ¡m sÃ¡t real-time SignalR (`/api/Chat/admin/sessions`, `/api/Chat/admin/my-history`, `toggle-handoff`, `reply-customer`).
-- `Services/AI` vÃ  `Services/Chat`: bá»™ mÃ¡y Hybrid RAG, Native Function Calling, Ä‘á»‹nh tuyáº¿n ngá»¯ nghÄ©a (`QueryPlannerService`), phÃ¢n tÃ­ch nÃ¢ng cao Admin (`AdminAdvancedAnalyticsService`), lÆ°u lá»‹ch sá»­ chat persistent.
-- `Hubs/ChatHub.cs`: SignalR Hub há»— trá»£ giao tiáº¿p theo thá»i gian thá»±c (Live Monitoring & Handoff) giá»¯a KhÃ¡ch hÃ ng vÃ  Admin.
+- `Program.cs`: cấu hình DI, DbContext, Identity, Session, HttpClient, Stripe, middleware, routing và seed dữ liệu khi app khởi động.
+- `Data/ApplicationDbContext.cs`: khai báo DbSet và quan hệ database cho sản phẩm, danh mục, đơn hàng, chi tiết đơn, nguyên liệu, công thức, giỏ hàng DB, đánh giá, coupon, thông báo, chat history.
+- `Data/SeedData.cs`: tự chạy migration và seed dữ liệu mẫu cho danh mục, sản phẩm, nguyên liệu, công thức.
+- `Data/IdentitySeed.cs`: seed role `Admin` và tài khoản admin mặc định.
+- `Controllers/ProductsController.cs`: danh sách sản phẩm, tìm kiếm/lọc, chi tiết sản phẩm, review.
+- `Controllers/CartController.cs`: giỏ hàng, coupon, checkout, tạo đơn, chọn thanh toán, xác nhận thanh toán.
+- `Controllers/AdminController.cs`: quản lý đơn hàng, sản phẩm, danh mục, nguyên liệu, công thức, coupon.
+- `Controllers/AdminDashboardController.cs`: dashboard doanh thu và xuất báo cáo.
+- `Controllers/ChatController.cs` và `Controllers/AIChatController.cs`: API chat khách hàng/admin, lấy lịch sử chat persistent và quản lý giám sát real-time SignalR (`/api/Chat/admin/sessions`, `/api/Chat/admin/my-history`, `toggle-handoff`, `reply-customer`).
+- `Services/AI` và `Services/Chat`: bộ máy Hybrid RAG, Native Function Calling, định tuyến ngữ nghĩa (`QueryPlannerService`), phân tích nâng cao Admin (`AdminAdvancedAnalyticsService`), lưu lịch sử chat persistent.
+- `Hubs/ChatHub.cs`: SignalR Hub hỗ trợ giao tiếp theo thời gian thực (Live Monitoring & Handoff) giữa Khách hàng và Admin.
 
-## Cáº­p nháº­t ná»•i báº­t: Lá»™ trÃ¬nh 3 bÆ°á»›c Chatbot AI ToÃ n diá»‡n (HoÃ n thÃ nh 100%)
+## Cập nhật nổi bật: Lộ trình 3 bước Chatbot AI Toàn diện (Hoàn thành 100%)
 
-Há»‡ thá»‘ng Chatbot AI cá»§a SweetCakeShop Ä‘Ã£ Ä‘Æ°á»£c nÃ¢ng cáº¥p toÃ n diá»‡n theo chuáº©n enterprise, tÃ­ch há»£p sÃ¢u kiáº¿n trÃºc **Hybrid RAG**, **Native Function Calling**, **SignalR Real-time Monitoring/Handoff** vÃ  **Executive Advanced Analytics**.
+Hệ thống Chatbot AI của SweetCakeShop đã được nâng cấp toàn diện theo chuẩn enterprise, tích hợp sâu kiến trúc **Hybrid RAG**, **Native Function Calling**, **SignalR Real-time Monitoring/Handoff** và **Executive Advanced Analytics**.
 
-### BÆ°á»›c 1: Native Function Calling & Hybrid RAG Search (HÆ°á»›ng A - KhÃ¡ch hÃ ng)
-- **Hybrid RAG Engine (`HybridRagSearchService`):** XÃ¢y dá»±ng bá»™ mÃ¡y tÃ¬m kiáº¿m lai káº¿t há»£p tá»« khÃ³a ngá»¯ nghÄ©a vÃ  full-text search tiáº¿ng Viá»‡t. Tá»± Ä‘á»™ng loáº¡i bá» stopword, cháº¥m Ä‘iá»ƒm Ä‘a trÆ°á»ng (TÃªn sáº£n pháº©m, MÃ´ táº£, Danh má»¥c) vÃ  Æ°u tiÃªn hiá»ƒn thá»‹ cÃ¡c sáº£n pháº©m bÃ¡n cháº¡y nháº¥t (`SoldQuantity`).
-- **Native Function Calling (`BakeryCustomerPlugin` & `QueryPlannerService`):** AI Ä‘Æ°á»£c trang bá»‹ nÄƒng lá»±c tá»± gá»i hÃ m thá»i gian thá»±c trá»±c tiáº¿p tá»« SQL Server:
-  - `search_products`: TÃ¬m kiáº¿m sáº£n pháº©m thÃ´ng minh theo tá»« khÃ³a hoáº·c sá»Ÿ thÃ­ch.
-  - `recommend_products`: Gá»£i Ã½ bÃ¡nh theo dá»‹p tiá»‡c (sinh nháº­t, ká»· niá»‡m, quÃ  táº·ng) hoáº·c má»©c giÃ¡/lá»i dáº·n.
-  - `get_active_promotions`: Truy váº¥n cÃ¡c chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i vÃ  mÃ£ giáº£m giÃ¡ Ä‘ang Ã¡p dá»¥ng.
-  - `search_news`: TÃ¬m Ä‘á»c tin tá»©c, bÃ i viáº¿t hÆ°á»›ng dáº«n lÃ m bÃ¡nh/tá»• chá»©c tiá»‡c.
-  - `check_order_status`: Tra cá»©u tÃ¬nh tráº¡ng Ä‘Æ¡n hÃ ng theo sá»‘ Ä‘iá»‡n thoáº¡i hoáº·c mÃ£ Ä‘Æ¡n.
-- **Tá»‘i Æ°u hÃ³a Context RAG (`BuildRelevantCatalogTextAsync`):** Tá»± Ä‘á»™ng cháº¯t lá»c vÃ  náº¡p Top sáº£n pháº©m & Æ°u Ä‘Ã£i liÃªn quan vÃ o System Prompt má»™t cÃ¡ch tinh gá»n, ngÄƒn ngá»«a tÃ¬nh tráº¡ng trÃ n token vÃ  Ä‘áº£m báº£o Ä‘á»™ chÃ­nh xÃ¡c tuyá»‡t Ä‘á»‘i.
+### Bước 1: Native Function Calling & Hybrid RAG Search (Hướng A - Khách hàng)
+- **Hybrid RAG Engine (`HybridRagSearchService`):** Xây dựng bộ máy tìm kiếm lai kết hợp từ khóa ngữ nghĩa và full-text search tiếng Việt. Tự động loại bỏ stopword, chấm điểm đa trường (Tên sản phẩm, Mô tả, Danh mục) và ưu tiên hiển thị các sản phẩm bán chạy nhất (`SoldQuantity`).
+- **Native Function Calling (`BakeryCustomerPlugin` & `QueryPlannerService`):** AI được trang bị năng lực tự gọi hàm thời gian thực trực tiếp từ SQL Server:
+  - `search_products`: Tìm kiếm sản phẩm thông minh theo từ khóa hoặc sở thích.
+  - `recommend_products`: Gợi ý bánh theo dịp tiệc (sinh nhật, kỷ niệm, quà tặng) hoặc mức giá/lời dặn.
+  - `get_active_promotions`: Truy vấn các chương trình khuyến mãi và mã giảm giá đang áp dụng.
+  - `search_news`: Tìm đọc tin tức, bài viết hướng dẫn làm bánh/tổ chức tiệc.
+  - `check_order_status`: Tra cứu tình trạng đơn hàng theo số điện thoại hoặc mã đơn.
+- **Tối ưu hóa Context RAG (`BuildRelevantCatalogTextAsync`):** Tự động chắt lọc và nạp Top sản phẩm & ưu đãi liên quan vào System Prompt một cách tinh gọn, ngăn ngừa tình trạng tràn token và đảm bảo độ chính xác tuyệt đối.
 
-### BÆ°á»›c 2: Há»£p nháº¥t 2 luá»“ng Chat (Customer & Admin - Real-time SignalR)
-- **Äá»“ng bá»™ giao diá»‡n & Tráº£i nghiá»‡m liá»n máº¡ch (`_AdminChatWidget.cshtml`, `ai-chat.js`):** Giao diá»‡n chat chuáº©n hÃ³a theo phong cÃ¡ch hiá»‡n Ä‘áº¡i vá»›i hiá»‡u á»©ng gÃµ phÃ­m (`typing dots`), tháº» sáº£n pháº©m trá»±c quan (`Product Cards`) vÃ  cÃ¡c chip tráº£ lá»i nhanh (`Quick Chips`).
-- **GiÃ¡m sÃ¡t trá»±c tiáº¿p - Live Monitoring (`ICustomerProductChatService` & `ChatController`):**
-  - Admin cÃ³ thá»ƒ theo dÃµi danh sÃ¡ch cÃ¡c phiÃªn trÃ² chuyá»‡n cá»§a khÃ¡ch hÃ ng Ä‘ang hoáº¡t Ä‘á»™ng trÃªn website theo thá»i gian thá»±c (`GET /api/Chat/admin/sessions`).
-  - Xem chi tiáº¿t toÃ n bá»™ Ä‘oáº¡n thoáº¡i cá»§a khÃ¡ch (`GET /api/Chat/admin/history?sessionKey=...`).
-- **Tiáº¿p quáº£n trá»±c tiáº¿p - Handoff (SignalR `ChatHub`):**
-  - Khi phÃ¡t hiá»‡n cÃ¢u há»i khÃ³ hoáº·c khÃ¡ch cÃ³ yÃªu cáº§u Ä‘áº·c biá»‡t, Admin cÃ³ thá»ƒ báº­t cháº¿ Ä‘á»™ **Tiáº¿p quáº£n / Ngáº¯t AI tá»± Ä‘á»™ng** (`POST /api/Chat/admin/toggle-handoff`).
-  - Khi cháº¿ Ä‘á»™ Handoff Ä‘Æ°á»£c báº­t, AI láº­p tá»©c chuyá»ƒn sang tráº¡ng thÃ¡i giá»¯ im láº·ng (`isSilent = true`). Admin gá»­i tin nháº¯n tráº£ lá»i trá»±c tiáº¿p cho khÃ¡ch qua SignalR (`POST /api/Chat/admin/reply-customer`), tin nháº¯n láº­p tá»©c hiá»ƒn thá»‹ trÃªn mÃ n hÃ¬nh khÃ¡ch vá»›i huy hiá»‡u **ðŸ‘‘ Admin há»— trá»£ trá»±c tiáº¿p**.
+### Bước 2: Hợp nhất 2 luồng Chat (Customer & Admin - Real-time SignalR)
+- **Đồng bộ giao diện & Trải nghiệm liền mạch (`_AdminChatWidget.cshtml`, `ai-chat.js`):** Giao diện chat chuẩn hóa theo phong cách hiện đại với hiệu ứng gõ phím (`typing dots`), thẻ sản phẩm trực quan (`Product Cards`) và các chip trả lời nhanh (`Quick Chips`).
+- **Giám sát trực tiếp - Live Monitoring (`ICustomerProductChatService` & `ChatController`):**
+  - Admin có thể theo dõi danh sách các phiên trò chuyện của khách hàng đang hoạt động trên website theo thời gian thực (`GET /api/Chat/admin/sessions`).
+  - Xem chi tiết toàn bộ đoạn thoại của khách (`GET /api/Chat/admin/history?sessionKey=...`).
+- **Tiếp quản trực tiếp - Handoff (SignalR `ChatHub`):**
+  - Khi phát hiện câu hỏi khó hoặc khách có yêu cầu đặc biệt, Admin có thể bật chế độ **Tiếp quản / Ngắt AI tự động** (`POST /api/Chat/admin/toggle-handoff`).
+  - Khi chế độ Handoff được bật, AI lập tức chuyển sang trạng thái giữ im lặng (`isSilent = true`). Admin gửi tin nhắn trả lời trực tiếp cho khách qua SignalR (`POST /api/Chat/admin/reply-customer`), tin nhắn lập tức hiển thị trên màn hình khách với huy hiệu **👑 Admin hỗ trợ trực tiếp**.
 
-### BÆ°á»›c 3: Admin Advanced Analytics (PhÃ¢n tÃ­ch & Thá»‘ng kÃª kinh doanh chuyÃªn sÃ¢u)
-- **Bá»™ mÃ¡y phÃ¢n tÃ­ch dá»¯ liá»‡u quáº£n trá»‹ (`AdminAdvancedAnalyticsService` & `IAdminAdvancedAnalyticsService`):** Cho phÃ©p trá»£ lÃ½ AI Ä‘Ã³ng vai trÃ² nhÆ° má»™t chuyÃªn gia phÃ¢n tÃ­ch kinh doanh (Business Analyst) cá»§a tiá»‡m bÃ¡nh:
-  1. **PhÃ¢n tÃ­ch xu hÆ°á»›ng doanh thu & nguyÃªn nhÃ¢n (`AnalyzeRevenueTrendAsync`):** So sÃ¡nh doanh thu ká»³ hiá»‡n táº¡i (tuáº§n/thÃ¡ng) vá»›i ká»³ trÆ°á»›c, tÃ­nh AOV (Average Order Value), tá»· lá»‡ tÄƒng/giáº£m % vÃ  tá»± Ä‘á»™ng chá»‰ ra nguyÃªn nhÃ¢n biáº¿n Ä‘á»™ng (nhÆ° sá»± gia tÄƒng lÆ°á»£ng Ä‘Æ¡n hÃ ng hay thay Ä‘á»•i dÃ²ng sáº£n pháº©m bÃ¡n cháº¡y).
-  2. **Top sáº£n pháº©m bÃ¡n cháº¡y theo ká»³ Ä‘á»™ng (`GetTopSellingByPeriodAsync`):** Thá»‘ng kÃª chÃ­nh xÃ¡c Top 5/10 mÃ³n bÃ¡nh bÃ¡n cháº¡y nháº¥t trong ngÃ y (`today`), tuáº§n (`week`), thÃ¡ng (`month`) hoáº·c nÄƒm (`year`), chi tiáº¿t sá»‘ lÆ°á»£ng bÃ¡n vÃ  tá»•ng doanh thu mang láº¡i.
-  3. **PhÃ¢n tÃ­ch kÃªnh bÃ¡n hÃ ng & hÃ nh vi khÃ¡ch hÃ ng (`GetOrderChannelBreakdownAsync`):** BÃ³c tÃ¡ch cÆ¡ cáº¥u Ä‘Æ¡n hÃ ng giá»¯a **KhÃ¡ch thÃ nh viÃªn** vs **KhÃ¡ch vÃ£ng lai**, thá»‘ng kÃª sá»‘ Ä‘Æ¡n cÃ³ sá»­ dá»¥ng mÃ£ giáº£m giÃ¡ (Coupon) vÃ  tá»•ng sá»‘ tiá»n tiáº¿t kiá»‡m cho khÃ¡ch.
-  4. **Truy váº¥n Ä‘á»™ng / Thá»‘ng kÃª linh hoáº¡t Text-to-SQL an toÃ n (`ExecuteDynamicAnalyticsQueryAsync`):** AI hiá»ƒu cÃ¢u há»i tá»± do báº±ng tiáº¿ng Viá»‡t, phÃ¢n tÃ­ch Ã½ Ä‘á»‹nh vÃ  thá»±c thi truy váº¥n thá»‘ng kÃª an toÃ n tá»« DB (nhÆ° kiá»ƒm tra cÃ¡c mÃ£ coupon dÃ¹ng nhiá»u nháº¥t, danh sÃ¡ch nguyÃªn liá»‡u cÃ³ tá»“n kho dÆ°á»›i ngÆ°á»¡ng bÃ¡o Ä‘á»™ng, tra cá»©u Ä‘Æ¡n hÃ ng chá» xá»­ lÃ½ pending) vÃ  trÃ¬nh bÃ y dá»¯ liá»‡u dáº¡ng báº£ng Markdown kÃ¨m káº¿t luáº­n.
-- **Tá»‘i Æ°u Ä‘á»‹nh tuyáº¿n ngá»¯ nghÄ©a & láº­p káº¿ hoáº¡ch (`SemanticFunctionMapper` & `BuildPlannerPrompt`):** Cáº­p nháº­t há»‡ thá»‘ng Ä‘á»‹nh tuyáº¿n kÃ©p (LLM + Semantic Fallback), Ä‘áº£m báº£o AI luÃ´n Ã¡nh xáº¡ Ä‘Ãºng **100%** sang cÃ¡c hÃ m phÃ¢n tÃ­ch chuyÃªn sÃ¢u khi Admin há»i vá» xu hÆ°á»›ng, kÃªnh bÃ¡n hÃ ng hay thá»‘ng kÃª Ä‘á»™ng.
-- **Duy trÃ¬ lá»‹ch sá»­ trÃ² chuyá»‡n persistent khi chuyá»ƒn trang (`GET /api/Chat/admin/my-history`):** Lá»‹ch sá»­ chat cá»§a Admin Ä‘Æ°á»£c lÆ°u persistent trong bá»™ nhá»› cache phiÃªn lÃ m viá»‡c. Khi Admin di chuyá»ƒn giá»¯a cÃ¡c tab (MÃ£ giáº£m giÃ¡, ÄÆ¡n hÃ ng, NguyÃªn liá»‡u...) vÃ  má»Ÿ láº¡i bong bÃ³ng chat âœ¨, toÃ n bá»™ lá»‹ch sá»­ trÃ² chuyá»‡n vÃ  phÃ¢n tÃ­ch trÆ°á»›c Ä‘Ã³ Ä‘Æ°á»£c táº£i láº¡i Ä‘áº§y Ä‘á»§, khÃ´ng bá»‹ máº¥t mÃ¡t.
+### Bước 3: Admin Advanced Analytics (Phân tích & Thống kê kinh doanh chuyên sâu)
+- **Bộ máy phân tích dữ liệu quản trị (`AdminAdvancedAnalyticsService` & `IAdminAdvancedAnalyticsService`):** Cho phép trợ lý AI đóng vai trò như một chuyên gia phân tích kinh doanh (Business Analyst) của tiệm bánh:
+  1. **Phân tích xu hướng doanh thu & nguyên nhân (`AnalyzeRevenueTrendAsync`):** So sánh doanh thu kỳ hiện tại (tuần/tháng) với kỳ trước, tính AOV (Average Order Value), tỷ lệ tăng/giảm % và tự động chỉ ra nguyên nhân biến động (như sự gia tăng lượng đơn hàng hay thay đổi dòng sản phẩm bán chạy).
+  2. **Top sản phẩm bán chạy theo kỳ động (`GetTopSellingByPeriodAsync`):** Thống kê chính xác Top 5/10 món bánh bán chạy nhất trong ngày (`today`), tuần (`week`), tháng (`month`) hoặc năm (`year`), chi tiết số lượng bán và tổng doanh thu mang lại.
+  3. **Phân tích kênh bán hàng & hành vi khách hàng (`GetOrderChannelBreakdownAsync`):** Bóc tách cơ cấu đơn hàng giữa **Khách thành viên** vs **Khách vãng lai**, thống kê số đơn có sử dụng mã giảm giá (Coupon) và tổng số tiền tiết kiệm cho khách.
+  4. **Truy vấn động / Thống kê linh hoạt Text-to-SQL an toàn (`ExecuteDynamicAnalyticsQueryAsync`):** AI hiểu câu hỏi tự do bằng tiếng Việt, phân tích ý định và thực thi truy vấn thống kê an toàn từ DB (như kiểm tra các mã coupon dùng nhiều nhất, danh sách nguyên liệu có tồn kho dưới ngưỡng báo động, tra cứu đơn hàng chờ xử lý pending) và trình bày dữ liệu dạng bảng Markdown kèm kết luận.
+- **Tối ưu định tuyến ngữ nghĩa & lập kế hoạch (`SemanticFunctionMapper` & `BuildPlannerPrompt`):** Cập nhật hệ thống định tuyến kép (LLM + Semantic Fallback), đảm bảo AI luôn ánh xạ đúng **100%** sang các hàm phân tích chuyên sâu khi Admin hỏi về xu hướng, kênh bán hàng hay thống kê động.
+- **Duy trì lịch sử trò chuyện persistent khi chuyển trang (`GET /api/Chat/admin/my-history`):** Lịch sử chat của Admin được lưu persistent trong bộ nhớ cache phiên làm việc. Khi Admin di chuyển giữa các tab (Mã giảm giá, Đơn hàng, Nguyên liệu...) và mở lại bong bóng chat ✨, toàn bộ lịch sử trò chuyện và phân tích trước đó được tải lại đầy đủ, không bị mất mát.
 
-## YÃªu cáº§u mÃ´i trÆ°á»ng
+## Yêu cầu môi trường
 
 - .NET SDK 10.x
-- SQL Server hoáº·c SQL Server Express/LocalDB
-- Visual Studio 2022/Cursor/VS Code tÃ¹y mÃ´i trÆ°á»ng dev
-- TÃ¹y chá»n: Stripe key, Gemini key, OpenAI key náº¿u muá»‘n dÃ¹ng thanh toÃ¡n online/chat AI Ä‘áº§y Ä‘á»§
+- SQL Server hoặc SQL Server Express/LocalDB
+- Visual Studio 2022/Cursor/VS Code tùy môi trường dev
+- Tùy chọn: Stripe key, Gemini key, OpenAI key nếu muốn dùng thanh toán online/chat AI đầy đủ
 
-## Cáº¥u hÃ¬nh trÆ°á»›c khi cháº¡y
+## Cấu hình trước khi chạy
 
-1. Cáº­p nháº­t connection string trong `SweetCakeShop/appsettings.json` hoáº·c dÃ¹ng User Secrets:
+1. Cập nhật connection string trong `SweetCakeShop/appsettings.json` hoặc dùng User Secrets:
 
 ```powershell
 cd .\SweetCakeShop
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=.;Database=SweetCakeShop;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
 ```
 
-2. Cáº¥u hÃ¬nh key dá»‹ch vá»¥ náº¿u cáº§n:
+2. Cấu hình key dịch vụ nếu cần:
 
 ```powershell
 dotnet user-secrets set "Stripe:PublishableKey" "your_stripe_publishable_key"
@@ -130,7 +130,7 @@ dotnet user-secrets set "Gemini:ApiKey" "your_gemini_api_key"
 dotnet user-secrets set "OpenAI:ApiKey" "your_openai_api_key"
 ```
 
-3. CÃ³ thá»ƒ dÃ¹ng biáº¿n mÃ´i trÆ°á»ng cho má»™t sá»‘ key:
+3. Có thể dùng biến môi trường cho một số key:
 
 ```powershell
 $env:STRIPE_SECRET_KEY="your_stripe_secret_key"
@@ -138,27 +138,27 @@ $env:GEMINI_API_KEY="your_gemini_api_key"
 $env:OPENAI_API_KEY="your_openai_api_key"
 ```
 
-KhÃ´ng nÃªn commit API key tháº­t lÃªn repository. Náº¿u key Ä‘Ã£ tá»«ng bá»‹ commit, nÃªn thu há»“i vÃ  táº¡o key má»›i trÃªn trang quáº£n trá»‹ dá»‹ch vá»¥ tÆ°Æ¡ng á»©ng.
+Không nên commit API key thật lên repository. Nếu key đã từng bị commit, nên thu hồi và tạo key mới trên trang quản trị dịch vụ tương ứng.
 
-## CÃ¡ch cháº¡y dá»± Ã¡n
+## Cách chạy dự án
 
-Cháº¡y tá»« thÆ° má»¥c gá»‘c repo:
+Chạy từ thư mục gốc repo:
 
 ```powershell
 dotnet restore .\SweetCakeShop\SweetCakeShop.csproj
 dotnet run --project .\SweetCakeShop\SweetCakeShop.csproj
 ```
 
-Theo `Properties/launchSettings.json`, app cháº¡y máº·c Ä‘á»‹nh táº¡i:
+Theo `Properties/launchSettings.json`, app chạy mặc định tại:
 
 - HTTP: `http://localhost:5258`
 - HTTPS: `https://localhost:7120`
 
-Khi app khá»Ÿi Ä‘á»™ng, `SeedData.Initialize()` sáº½ gá»i `context.Database.Migrate()`, vÃ¬ váº­y database sáº½ tá»± apply migration cÃ²n thiáº¿u vÃ  seed dá»¯ liá»‡u máº«u náº¿u báº£ng Ä‘ang trá»‘ng.
+Khi app khởi động, `SeedData.Initialize()` sẽ gọi `context.Database.Migrate()`, vì vậy database sẽ tự apply migration còn thiếu và seed dữ liệu mẫu nếu bảng đang trống.
 
-## TÃ i khoáº£n seed
+## Tài khoản seed
 
-Admin máº·c Ä‘á»‹nh Ä‘Æ°á»£c táº¡o trong `Data/IdentitySeed.cs`:
+Admin mặc định được tạo trong `Data/IdentitySeed.cs`:
 
 ```text
 Email: admin@gmail.com
@@ -166,244 +166,46 @@ Password: Admin@123
 Role: Admin
 ```
 
-TÃ i khoáº£n thÆ°á»ng cÃ³ thá»ƒ Ä‘Äƒng kÃ½ trá»±c tiáº¿p á»Ÿ trang Identity `/Identity/Account/Register`.
+Tài khoản thường có thể đăng ký trực tiếp ở trang Identity `/Identity/Account/Register`.
 
-## Flow khá»Ÿi Ä‘á»™ng á»©ng dá»¥ng
+## 🎓 CẨM NANG BẢO VỆ ĐỒ ÁN (Dành cho Vấn đáp)
 
-```text
-dotnet run
-  |
-  v
-Program.cs táº¡o WebApplicationBuilder
-  |
-  v
-Äá»c ConnectionStrings:DefaultConnection
-  |
-  v
-ÄÄƒng kÃ½ ApplicationDbContext vá»›i SQL Server
-  |
-  v
-ÄÄƒng kÃ½ Identity + Role + Cookie
-  |
-  v
-ÄÄƒng kÃ½ Session, HttpContextAccessor, MemoryCache
-  |
-  v
-ÄÄƒng kÃ½ cÃ¡c service nghiá»‡p vá»¥, AI, chat, payment
-  |
-  v
-Äá»c Stripe secret tá»« config hoáº·c STRIPE_SECRET_KEY
-  |
-  v
-Build app
-  |
-  v
-Táº¡o scope Ä‘á»ƒ cháº¡y migration + seed data + seed admin
-  |
-  v
-Cáº¥u hÃ¬nh middleware: HTTPS, StaticAssets, Routing, Session, Auth
-  |
-  v
-Map controller route, API controller, Razor Pages
-  |
-  v
-App láº¯ng nghe HTTP/HTTPS theo launchSettings
-```
+Phần này đúc kết những kiến trúc cốt lõi nhất của dự án để sinh viên dễ dàng ôn tập và tự tin trả lời các câu hỏi phản biện của giảng viên.
 
-## Flow khÃ¡ch hÃ ng mua hÃ ng
+### 1. Kiến trúc AI Chatbot (RAG + Function Calling)
+Chatbot không đơn thuần là gọi API của ChatGPT/Gemini, mà được thiết kế theo chuẩn Enterprise gồm 4 bước (xem file `AiChatService.cs`):
+- **Bước 1 (Lọc từ khóa - C#):** Sử dụng C# thuần (`TopicFilterService` và `ChatSecurityService`) để chặn đứng các câu hỏi lạc đề, nhạy cảm, cố tình moi móc tài khoản Admin. Việc chặn ở máy chủ giúp **tiết kiệm tiền API**, **tốc độ phản hồi cực nhanh (low latency)** và **bảo mật tuyệt đối 100%**.
+- **Bước 2 (Lên kế hoạch - Planner):** Gửi câu hỏi cho AI thông qua `QueryPlannerService` kèm theo danh bạ các hàm được phép gọi (`AiToolDefinitions`). Bắt buộc AI trả về định dạng JSON chứa tên hàm cần thực thi (Ví dụ: `{"function": "SearchProducts"}`).
+- **Bước 3 (Thực thi - Executor):** C# đọc tên hàm từ JSON, chọc thẳng vào SQL Server để kéo dữ liệu bánh thật ra ngoài (`AiFunctionExecutorService.cs`). Đảm bảo dữ liệu luôn mới nhất và chính xác 100%.
+- **Bước 4 (Tạo ngữ cảnh & Trả lời - Consultant):** Gom toàn bộ dữ liệu thật móc được ở Bước 3, cộng thêm các quy định giao hàng, chính sách cửa hàng (`StoreKnowledgeService`), gói lại thành một khối Prompt khổng lồ gửi cho AI. AI nhìn vào dữ liệu thật đó và sinh ra câu văn giao tiếp tự nhiên. (Đây là kỹ thuật RAG giúp AI không bao giờ bịa đặt).
 
-```text
-Home/Index
-  |
-  v
-Products/Index hoáº·c Products/IndexPro
-  |
-  v
-Products/Details/{id}
-  |
-  v
-Cart/Add
-  |
-  v
-Náº¿u chÆ°a Ä‘Äƒng nháº­p: giá» hÃ ng lÆ°u trong Session
-Náº¿u Ä‘Ã£ Ä‘Äƒng nháº­p: giá» hÃ ng lÆ°u trong báº£ng CartItems
-  |
-  v
-Cart/Index
-  |
-  v
-Cart/ApplyCoupon náº¿u cÃ³ mÃ£ giáº£m giÃ¡
-  |
-  v
-Cart/Checkout
-  |
-  v
-Náº¿u chÆ°a Ä‘Äƒng nháº­p: chuyá»ƒn sang Identity Login
-  |
-  v
-Cart/CheckoutConfirm
-  |
-  v
-OrderService.CreateOrderAsync táº¡o Order + OrderDetails
-  |
-  v
-XÃ³a giá» hÃ ng, xÃ³a coupon trong Session
-  |
-  v
-Cart/Payment
-  |
-  v
-Chá»n COD hoáº·c Online
-```
+### 2. Xử lý khiếu nại & Chuyển giao nhân viên (Human Handoff)
+- Hệ thống sử dụng `OrderHandoffService` để liên tục dùng Biểu thức chính quy (Regex) rà quét tin nhắn của khách.
+- Khi phát hiện các từ khóa báo động như *"khiếu nại", "dở quá", "tệ quá", "lừa đảo"*, hệ thống lập tức:
+  1. Ngắt quyền tự động trả lời của AI.
+  2. Bắn thông báo khẩn cấp vào màn hình của Admin thông qua SignalR.
+  3. Cho phép Admin nhảy vào chat trực tiếp với khách để xử lý khủng hoảng.
 
-## Flow thanh toÃ¡n
+### 3. Tìm kiếm thông minh (Smart Search)
+Không sử dụng lệnh `LIKE` truyền thống của SQL, hệ thống kết hợp nhiều kỹ thuật (xem `VietnameseNormalizerService.cs` và `SmartSearchService.cs`):
+- **Unicode Normalization:** Lột sạch dấu tiếng Việt, đưa chữ về viết thường để so khớp (Khách gõ "banh kem" vẫn tìm ra "Bánh Kem").
+- **Stop-words Filtering:** Tự động chặt câu của khách, vứt đi các từ vô nghĩa ("bánh", "kem", "loại") để chỉ tập trung dò tìm các từ khóa chính ("matcha", "socola").
+- **Relevance Scoring:** Chấm điểm dựa trên trọng số (Khớp tên bánh: 1.0 điểm, khớp mô tả: 0.5 điểm, khớp danh mục: 0.3 điểm).
+- **Levenshtein Distance:** Cứu vớt lỗi đánh máy. Khách gõ "mách cha" sai chính tả vẫn được chấm điểm vớt để tìm ra bánh "Matcha".
 
-### COD
+### 4. Giao tiếp thời gian thực (SignalR)
+- **Tại sao dùng SignalR?** Thay vì để màn hình Admin phải F5 (tải lại trang) liên tục mỗi 3 giây để kiểm tra tin nhắn mới, SignalR duy trì một kết nối WebSocket 2 chiều.
+- Khi khách gõ tin nhắn, Server nhận được sẽ dùng lệnh `_hubContext.Clients.Group("AdminRoom").SendAsync(...)` để **chủ động bắn** tin nhắn đó thẳng vào màn hình Admin. Nhờ vậy, Admin theo dõi được toàn bộ cuộc hội thoại của khách theo thời gian thực (Real-time Live Monitoring) mà không làm sập server.
 
-```text
-Cart/ProcessPayment(method = COD)
-  |
-  v
-OrderStatuses.ApplyConfirmed(order)
-  |
-  v
-LÆ°u tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
-  |
-  v
-Cart/Success
-```
+## Database và migration
 
-### Online qua Stripe
-
-```text
-Cart/ProcessPayment(method = Online)
-  |
-  v
-PaymentService.CreatePaymentAsync táº¡o Stripe Checkout Session
-  |
-  v
-Order.Status = AwaitingPayment
-  |
-  v
-Redirect sang Stripe Checkout
-  |
-  v
-Stripe redirect vá» Cart/Success?orderId=...&session_id=...
-  |
-  v
-Success action kiá»ƒm tra Stripe session
-  |
-  v
-Náº¿u paid: xÃ¡c nháº­n Ä‘Æ¡n hÃ ng
-Náº¿u khÃ´ng paid: chuyá»ƒn PaymentFailed hoáº·c giá»¯ tráº¡ng thÃ¡i hiá»‡n táº¡i
-```
-
-Náº¿u Stripe lá»—i hoáº·c thiáº¿u cáº¥u hÃ¬nh, `PaymentService` tráº£ fallback dáº¡ng mÃ£ chuyá»ƒn khoáº£n thá»§ cÃ´ng Ä‘á»ƒ UI váº«n cÃ³ thá»ƒ hiá»ƒn thá»‹ hÆ°á»›ng xá»­ lÃ½.
-
-## Flow admin
-
-```text
-Admin Ä‘Äƒng nháº­p báº±ng tÃ i khoáº£n role Admin
-  |
-  v
-/Admin hoáº·c /AdminDashboard
-  |
-  v
-Xem dashboard doanh thu, thá»‘ng kÃª Ä‘Æ¡n, top sáº£n pháº©m
-  |
-  v
-Quáº£n lÃ½ sáº£n pháº©m, danh má»¥c, nguyÃªn liá»‡u, cÃ´ng thá»©c
-  |
-  v
-Quáº£n lÃ½ Ä‘Æ¡n hÃ ng vÃ  cáº­p nháº­t tráº¡ng thÃ¡i
-  |
-  v
-Quáº£n lÃ½ coupon
-  |
-  v
-Xuáº¥t bÃ¡o cÃ¡o Excel/PDF
-  |
-  v
-DÃ¹ng admin AI chat Ä‘á»ƒ há»i dá»¯ liá»‡u kinh doanh
-```
-
-CÃ¡c controller admin Ä‘á»u Ä‘Æ°á»£c báº£o vá»‡ báº±ng:
-
-```csharp
-[Authorize(Roles = nameof(Roles.Admin))]
-```
-
-## Flow chatbot AI
-
-### Chat khÃ¡ch hÃ ng (Hybrid RAG & Native Function Calling + Live SignalR)
-
-```text
-Widget frontend gá»­i request tá»›i /api/Chat/SendMessage (hoáº·c nháº­n realtime qua SignalR ChatHub)
-  |
-  v
-ChatController nháº­n UserMessage & kiá»ƒm tra tráº¡ng thÃ¡i Handoff (Tiáº¿p quáº£n trá»±c tiáº¿p)
-  |
-  +---[Náº¿u Admin Ä‘ang Handoff (`active = true`)]---> AI giá»¯ im láº·ng (`isSilent = true`), Admin tráº£ lá»i trá»±c tiáº¿p qua SignalR
-  |
-  v [Náº¿u AI tá»± Ä‘á»™ng tÆ° váº¥n]
-CustomerProductChatService xÃ¡c Ä‘á»‹nh user hoáº·c ChatToken & láº¥y lá»‹ch sá»­ tá»« DB
-  |
-  v
-QueryPlannerService / Semantic Kernel Ã¡nh xáº¡ Ã½ Ä‘á»‹nh & gá»i Native Function Calling (`BakeryCustomerPlugin`)
-  |
-  +---> search_products / recommend_products / get_active_promotions / search_news / check_order_status
-  |
-  v
-HybridRagSearchService thá»±c hiá»‡n tÃ¬m kiáº¿m lai (Tá»« khÃ³a ngá»¯ nghÄ©a + Full-text cháº¥m Ä‘iá»ƒm Ä‘a trÆ°á»ng SQL Server)
-  |
-  v
-BuildRelevantCatalogTextAsync cháº¯t lá»c Top sáº£n pháº©m & Æ°u Ä‘Ã£i náº¡p vÃ o System Prompt
-  |
-  v
-LlmCompletionService gá»i Gemini / OpenAI (hoáº·c Fallback) táº¡o pháº£n há»“i tá»± nhiÃªn báº±ng tiáº¿ng Viá»‡t
-  |
-  v
-LÆ°u tin nháº¯n vÃ o CustomerChatMessages & gá»­i Ä‘á»“ng thá»i qua SignalR tá»›i Admin Live Monitoring Panel
-```
-
-### Chat admin (Advanced Executive Analytics & Persistent History)
-
-```text
-Admin má»Ÿ bong bÃ³ng chat âœ¨ (Tá»± Ä‘á»™ng khÃ´i phá»¥c lá»‹ch sá»­ qua /api/Chat/admin/my-history)
-  |
-  v
-Admin nháº­p cÃ¢u há»i phÃ¢n tÃ­ch (VD: "Xu hÆ°á»›ng doanh thu tuáº§n nÃ y vÃ¬ sao?", "KÃªnh bÃ¡n hÃ ng nÃ o tá»‘t?")
-  |
-  v
-ChatController nháº­n request (/api/Chat/admin) & kiá»ƒm tra quyá»n Role Admin
-  |
-  v
-AiChatService / QueryPlannerService thá»±c hiá»‡n Æ°u tiÃªn Ä‘á»‹nh tuyáº¿n ngá»¯ nghÄ©a kÃ©p (LLM + Fast Deterministic Map)
-  |
-  +---> AnalyzeRevenueTrend: PhÃ¢n tÃ­ch xu hÆ°á»›ng, % tÄƒng trÆ°á»Ÿng, AOV vÃ  chá»‰ rÃµ nguyÃªn nhÃ¢n biáº¿n Ä‘á»™ng
-  +---> GetTopSellingByPeriod: Top sáº£n pháº©m bÃ¡n cháº¡y theo ká»³ Ä‘á»™ng (today, week, month, year)
-  +---> GetOrderChannelBreakdown: BÃ³c tÃ¡ch kÃªnh bÃ¡n hÃ ng, ThÃ nh viÃªn vs VÃ£ng lai, hiá»‡u quáº£ Coupon
-  +---> ExecuteDynamicAnalyticsQuery: Truy váº¥n tá»± do Text-to-SQL an toÃ n, cáº£nh bÃ¡o tá»“n kho, Ä‘Æ¡n pending
-  |
-  v
-AdminAdvancedAnalyticsService thá»±c thi truy váº¥n nghiá»‡p vá»¥ cáº¥p cao trá»±c tiáº¿p trÃªn ApplicationDbContext
-  |
-  v
-ConsultantResponseService xÃ¢y dá»±ng Executive RAG Context (cháº¿ Ä‘á»™ Admin háº¡n má»©c 1000 tokens)
-  |
-  v
-LlmCompletionService tá»•ng há»£p bÃ¡o cÃ¡o quáº£n trá»‹ chuyÃªn nghiá»‡p & lÆ°u tráº¡ng thÃ¡i persistent
-```
-
-## Database vÃ  migration
-
-Migration náº±m táº¡i:
+Migration nằm tại:
 
 ```text
 SweetCakeShop/Data/Migrations/
 ```
 
-CÃ¡c lá»‡nh thÆ°á»ng dÃ¹ng:
+Các lệnh thường dùng:
 
 ```powershell
 cd .\SweetCakeShop
@@ -411,16 +213,15 @@ dotnet ef migrations add TenMigrationMoi
 dotnet ef database update
 ```
 
-Trong runtime hiá»‡n táº¡i, app Ä‘Ã£ tá»± gá»i `Database.Migrate()` khi khá»Ÿi Ä‘á»™ng, nÃªn vá»›i database má»›i chá»‰ cáº§n cháº¡y app lÃ  schema vÃ  dá»¯ liá»‡u máº«u sáº½ Ä‘Æ°á»£c táº¡o.
+Trong runtime hiện tại, app đã tự gọi `Database.Migrate()` khi khởi động, nên với database mới chỉ cần chạy app là schema và dữ liệu mẫu sẽ được tạo.
 
-## Ghi chÃº phÃ¡t triá»ƒn
+## Ghi chú phát triển
 
-- Route máº·c Ä‘á»‹nh: `{controller=Home}/{action=Index}/{id?}`.
-- Razor Pages Identity Ä‘Æ°á»£c map báº±ng `app.MapRazorPages()`.
-- Static assets náº±m trong `wwwroot`.
-- áº¢nh upload sáº£n pháº©m náº±m trong `wwwroot/uploads/products`.
-- Cart anonymous dÃ¹ng Session; cart user Ä‘Äƒng nháº­p dÃ¹ng DB.
-- Review sáº£n pháº©m yÃªu cáº§u Ä‘Äƒng nháº­p.
-- Checkout yÃªu cáº§u Ä‘Äƒng nháº­p.
-- Admin dashboard vÃ  API admin yÃªu cáº§u role `Admin`.
-
+- Route mặc định: `{controller=Home}/{action=Index}/{id?}`.
+- Razor Pages Identity được map bằng `app.MapRazorPages()`.
+- Static assets nằm trong `wwwroot`.
+- Ảnh upload sản phẩm nằm trong `wwwroot/uploads/products`.
+- Cart anonymous dùng Session; cart user đăng nhập dùng DB.
+- Review sản phẩm yêu cầu đăng nhập.
+- Checkout yêu cầu đăng nhập.
+- Admin dashboard và API admin yêu cầu role `Admin`.
