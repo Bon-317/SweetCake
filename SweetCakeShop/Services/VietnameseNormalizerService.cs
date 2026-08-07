@@ -4,28 +4,28 @@ using System.Text;
 namespace SweetCakeShop.Services
 {
     /// <summary>
-    /// Normalizes Vietnamese text for search: removes diacritics (dấu),
-    /// lowercases, and trims whitespace so that "Bánh kem" matches "banh kem".
+    /// Chuẩn hóa văn bản tiếng Việt để tìm kiếm: loại bỏ dấu,
+    /// chuyển thành chữ thường, và xóa khoảng trắng thừa để "Bánh kem" khớp với "banh kem".
     /// </summary>
     public interface IVietnameseNormalizerService
     {
-        /// <summary>Normalize text: remove diacritics, lowercase, trim.</summary>
+        /// <summary>Chuẩn hóa văn bản: bỏ dấu, chữ thường, xóa khoảng trắng thừa.</summary>
         string Normalize(string? input);
 
-        /// <summary>Check if <paramref name="source"/> contains <paramref name="search"/> after normalization.</summary>
+        /// <summary>Kiểm tra xem <paramref name="source"/> có chứa <paramref name="search"/> sau khi chuẩn hóa không.</summary>
         bool FuzzyContains(string? source, string? search);
 
         /// <summary>
-        /// Compute a relevance score (0.0–1.0) for how well <paramref name="candidate"/>
-        /// matches <paramref name="query"/> after normalization.
+        /// Tính toán điểm liên quan (0.0–1.0) để xem <paramref name="candidate"/>
+        /// khớp với <paramref name="query"/> như thế nào sau khi chuẩn hóa.
         /// </summary>
         double Score(string? candidate, string? query);
     }
 
     public class VietnameseNormalizerService : IVietnameseNormalizerService
     {
-        // Vietnamese-specific character replacements that Unicode decomposition
-        // doesn't handle correctly (đ/Đ → d/D).
+        // Thay thế các ký tự đặc biệt của tiếng Việt mà phân tách Unicode
+        // không xử lý đúng (đ/Đ → d/D).
         private static readonly Dictionary<char, char> SpecialReplacements = new()
         {
             { 'đ', 'd' }, { 'Đ', 'd' }
@@ -53,14 +53,14 @@ namespace SweetCakeShop.Services
                 sb.Append(ch);
             }
 
-            // Unicode normalization FormD decomposes characters so that
-            // accented chars become base char + combining mark.
+            // Chuẩn hóa Unicode FormD phân tách các ký tự để
+            // ký tự có dấu trở thành ký tự gốc + dấu kết hợp (combining mark).
             var normalized = sb.ToString().Normalize(NormalizationForm.FormD);
 
             var result = new StringBuilder(normalized.Length);
             foreach (var ch in normalized)
             {
-                // Skip combining diacritical marks (category NonSpacingMark)
+                // Bỏ qua các dấu kết hợp (thuộc danh mục NonSpacingMark)
                 if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
                 {
                     result.Append(ch);
@@ -79,7 +79,7 @@ namespace SweetCakeShop.Services
             var normalizedSearch = Normalize(search);
 
             if (string.IsNullOrEmpty(normalizedSearch))
-                return true; // empty search matches everything
+                return true; // chuỗi tìm kiếm rỗng thì khớp với tất cả
 
             if (string.IsNullOrEmpty(normalizedSource))
                 return false;
@@ -95,30 +95,30 @@ namespace SweetCakeShop.Services
             if (string.IsNullOrEmpty(normalizedQuery) || string.IsNullOrEmpty(normalizedCandidate))
                 return 0.0;
 
-            // Exact match → highest score
+            // Khớp tuyệt đối → điểm cao nhất
             if (normalizedCandidate == normalizedQuery)
                 return 1.0;
 
-            // Starts with → high score
+            // Bắt đầu bằng → điểm cao
             if (normalizedCandidate.StartsWith(normalizedQuery, StringComparison.Ordinal))
                 return 0.9;
 
-            // Contains → medium score, weighted by position
+            // Chứa từ khóa → điểm trung bình, tính trọng số theo vị trí
             var index = normalizedCandidate.IndexOf(normalizedQuery, StringComparison.Ordinal);
             if (index >= 0)
             {
-                // Earlier position = higher score
+                // Vị trí xuất hiện càng sớm = điểm càng cao
                 var positionFactor = 1.0 - ((double)index / normalizedCandidate.Length);
                 return 0.5 + (positionFactor * 0.3);
             }
 
-            // Word-level matching: check if all query words appear in candidate
+            // So khớp cấp độ từ: kiểm tra xem tất cả các từ trong truy vấn có xuất hiện trong chuỗi gốc không
             var queryWords = normalizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var candidateWords = normalizedCandidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             if (queryWords.Length > 1)
             {
-                // Filter out common bakery stopwords when the query has specific keywords
+                // Lọc bỏ các từ dừng (stopwords) phổ biến của tiệm bánh khi câu truy vấn có các từ khóa cụ thể
                 var significantQueryWords = queryWords.Where(w => !BakeryStopWords.Contains(w)).ToArray();
                 if (significantQueryWords.Length == 0)
                     significantQueryWords = queryWords;
@@ -132,7 +132,7 @@ namespace SweetCakeShop.Services
                 }
             }
 
-            // Edit distance fallback for typo tolerance (only for short queries and non-stopwords)
+            // Thuật toán khoảng cách chỉnh sửa dự phòng để chấp nhận lỗi đánh máy (chỉ áp dụng cho truy vấn ngắn và không phải từ dừng)
             if (normalizedQuery.Length <= 20 && !BakeryStopWords.Contains(normalizedQuery))
             {
                 var minDistance = int.MaxValue;
@@ -144,7 +144,7 @@ namespace SweetCakeShop.Services
                         minDistance = distance;
                 }
 
-                // Allow up to 2 character differences for fuzzy matching
+                // Cho phép sai lệch tối đa 2 ký tự cho tìm kiếm mờ (fuzzy matching)
                 if (minDistance <= 2)
                 {
                     return 0.2 * (1.0 - ((double)minDistance / Math.Max(normalizedQuery.Length, 1)));

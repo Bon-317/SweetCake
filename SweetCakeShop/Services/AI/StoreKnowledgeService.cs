@@ -38,6 +38,9 @@ namespace SweetCakeShop.Services.AI
             sb.AppendLine("• Giá trên web là giá chính thức — chỉ báo giá có trong danh sách sản phẩm bên dưới.");
             sb.AppendLine("• Không có món trong menu → báo nhân viên tiệm hỗ trợ, không tự chế tên/giá.");
             sb.AppendLine("• Muốn gặp người thật → gõ \"gặp nhân viên\" hoặc gọi 1900-SWEET.");
+            // KIỂM TRA QUYỀN (AiChatMode) ĐỂ CẤP KIẾN THỨC TƯƠNG ỨNG
+            // Nếu là Admin (đang dùng trang quản trị), cấp cho AI các quyền/kiến thức xem doanh thu, xem báo cáo (GetAdminCapabilities).
+            // Nếu là Khách (Customer), chỉ cấp cho AI các quyền xem bánh, hỏi giá (GetCustomerCapabilities) 
             sb.AppendLine(mode == AiChatMode.Admin
                 ? _website.GetAdminCapabilities()
                 : _website.GetCustomerCapabilities());

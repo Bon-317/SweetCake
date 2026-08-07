@@ -89,12 +89,16 @@ namespace SweetCakeShop.Services
             if (string.IsNullOrWhiteSpace(trimmed))
                 return new ChatReplyResult { Reply = "Bạn vui lòng nhập câu hỏi nhé." };
 
+            // BƯỚC 1: LỌC TỪ KHÓA BẰNG CODE C# (Không tốn tiền gọi AI)
+            // Kiểm tra xem khách có đang hỏi lạc đề không (ví dụ: hỏi sửa xe máy).
             if (_topicFilter.IsClearlyOffTopic(trimmed))
                 return new ChatReplyResult { Reply = _topicFilter.GetRejectionMessage(language) };
 
+            // Cảnh vệ: Kiểm tra xem có phải câu hỏi nhạy cảm, cố tình hack hệ thống không.
             if (_security.IsRestrictedRequest(trimmed))
                 return new ChatReplyResult { Reply = _security.GetStaffRejectionMessage(language, mode) };
 
+            // Tiếp tân: Kiểm tra xem khách có đang yêu cầu chat với nhân viên thật không.
             if (mode == AiChatMode.Customer && _orderHandoff.RequestsHumanAgent(trimmed))
             {
                 var handoffReply = _orderHandoff.GetImmediateHandoffReply(language);
@@ -112,11 +116,16 @@ namespace SweetCakeShop.Services
             if (mode == AiChatMode.Customer)
                 _orderHandoff.UpdateFromMessage(sessionState, trimmed);
 
+            // BƯỚC 2: GỌI AI LẦN 1 (QUERY PLANNER)
+            // Ép AI đọc tin nhắn của khách và trả về 1 chuỗi JSON chứa TÊN HÀM cần thực thi.
+            // Ví dụ: khách gõ "bánh đắt nhất", AI sẽ trả về {"function": "GetHighestPriceProduct"}
             var functionCall = await _queryPlanner.PlanSingleFunctionAsync(
                 mode, trimmed, history, sessionState, cancellationToken);
 
             var plan = new AiFunctionPlan { Calls = [functionCall] };
 
+            // BƯỚC 3: THỰC THI (KÉO DỮ LIỆU TỪ SQL SERVER MANG LÊN RAM)
+            // C# đọc cái chuỗi JSON ở trên, chọc vào DB để kéo dữ liệu bánh thật ra ngoài.
             var businessContext = await _functionExecutor.ExecuteAsync(
                 mode, plan, trimmed, sessionState, language, cancellationToken);
 
@@ -127,6 +136,8 @@ namespace SweetCakeShop.Services
             _memory.UpdateFromContext(mode, businessContext, trimmed);
             _memory.SaveSessionState(mode, sessionState);
 
+            // BƯỚC 4: TẠO NGỮ CẢNH (RAG - Retrieval Augmented Generation)
+            // Gom dữ liệu SQL vừa móc được ở Bước 3 + chính sách giao hàng tĩnh (StoreKnowledge) lại thành một cục text siêu bự.
             var knowledge = _ragRetriever.BuildDocument(mode, businessContext);
             var enrichment = _enrichment.BuildEnrichmentBlock(mode, sessionState);
             knowledge.StoreDataBlock = _storeKnowledge.GetCoreKnowledgeBlock(mode) + "\n"
@@ -144,14 +155,19 @@ namespace SweetCakeShop.Services
                     knowledge.StoreDataBlock += "\n" + handoff;
             }
 
+            // BƯỚC 5: GỌI AI LẦN 2 (CONSULTANT RESPONSE)
+            // Quăng cục text khổng lồ vừa gom được ở Bước 4 vào cho AI. 
+            // Căn dặn AI: "Mày đóng vai nhân viên tư vấn, đọc đống dữ liệu SQL tao vừa gửi và trả lời khách thật tự nhiên nhé".
             var reply = await _consultant.GenerateAsync(
                 mode, trimmed, knowledge, history, language, sessionState, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(reply))
                 reply = _structuredResponse.Compose(mode, businessContext);
 
+            // Lưu đoạn chat này vào bộ nhớ để câu sau AI còn nhớ ngữ cảnh
             _memory.AddExchange(mode, trimmed, reply);
 
+            // Trả về giao diện người dùng
             return new ChatReplyResult
             {
                 Reply = reply,

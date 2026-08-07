@@ -5,19 +5,19 @@ using SweetCakeShop.Models;
 namespace SweetCakeShop.Services
 {
     /// <summary>
-    /// Smart search with Vietnamese normalization, fuzzy matching,
-    /// and relevance-based ranking.
+    /// Tìm kiếm thông minh với khả năng chuẩn hóa tiếng Việt, tìm kiếm mờ (fuzzy matching),
+    /// và xếp hạng dựa trên độ liên quan.
     /// </summary>
     public interface ISmartSearchService
     {
         /// <summary>
-        /// Search products with smart Vietnamese-aware matching.
-        /// Returns results sorted by relevance score descending.
+        /// Tìm kiếm sản phẩm bằng thuật toán nhận diện tiếng Việt thông minh.
+        /// Trả về danh sách kết quả được sắp xếp giảm dần theo điểm liên quan.
         /// </summary>
         Task<List<ProductSearchResult>> SearchAsync(string? query, int maxResults = 50);
 
         /// <summary>
-        /// Autocomplete suggestions for search bar.
+        /// Gợi ý tự động điền (Autocomplete) cho thanh tìm kiếm.
         /// </summary>
         Task<List<string>> AutocompleteAsync(string? query, int maxResults = 8);
     }
@@ -57,7 +57,7 @@ namespace SweetCakeShop.Services
                 }).ToList();
             }
 
-            // Load all products and score client-side for fuzzy matching
+            // Tải toàn bộ sản phẩm và chấm điểm phía server để thực hiện tìm kiếm mờ
             var products = await _context.Products
                 .AsNoTracking()
                 .Include(p => p.Category)
@@ -67,13 +67,13 @@ namespace SweetCakeShop.Services
 
             foreach (var product in products)
             {
-                // Score against product name (weight: 1.0)
+                // Chấm điểm dựa trên Tên sản phẩm (trọng số: 1.0)
                 var nameScore = _normalizer.Score(product.ProductName, query);
 
-                // Score against description (weight: 0.5)
+                // Chấm điểm dựa trên Mô tả sản phẩm (trọng số: 0.5)
                 var descScore = _normalizer.Score(product.Description, query) * 0.5;
 
-                // Score against category name (weight: 0.3)
+                // Chấm điểm dựa trên Tên danh mục (trọng số: 0.3)
                 var catScore = _normalizer.Score(product.Category?.CategoryName, query) * 0.3;
 
                 var totalScore = Math.Max(nameScore, Math.Max(descScore, catScore));
