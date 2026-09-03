@@ -14,6 +14,11 @@ RUN dotnet publish "SweetCakeShop.csproj" -c Release -o /app/publish /p:UseAppHo
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 WORKDIR /app
+
+# Cho phép OpenSSL sử dụng TLS cũ và các thuật toán mã hóa yếu (cần thiết cho Somee.com)
+RUN sed -i 's/\[openssl_init\]/\[openssl_init\]\nssl_conf = ssl_sect/g' /etc/ssl/openssl.cnf || true && \
+    printf "\n[ssl_sect]\nsystem_default = system_default_sect\n\n[system_default_sect]\nMinProtocol = TLSv1\nCipherString = DEFAULT@SECLEVEL=0\n" >> /etc/ssl/openssl.cnf || true
+
 COPY --from=build /app/publish .
 
 # Render defaults container port to 8080 (standard for .NET 8+)
