@@ -2,6 +2,8 @@
 
 SweetCakeShop là website thương mại điện tử bán bánh được xây bằng ASP.NET Core MVC. Dự án có các chức năng chính: xem danh mục/sản phẩm, tìm kiếm, giỏ hàng, mã giảm giá, đặt hàng, thanh toán COD hoặc Stripe, quản trị sản phẩm/đơn hàng/kho/nguyên liệu, dashboard doanh thu, xuất Excel/PDF và chatbot AI cho khách hàng/admin.
 
+Web: https://sweetcakeshop.onrender.com
+
 ## Công nghệ sử dụng
 
 - ASP.NET Core MVC + Razor Pages Identity
